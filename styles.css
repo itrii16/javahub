@@ -1,0 +1,267 @@
+:root {
+    /* Aesop-inspired Palette */
+    --bg-color: #FFFEF2;
+    /* Signature Cream */
+    --text-main: #252525;
+    /* Dark Charcoal */
+    --text-secondary: #666666;
+    /* Medium Gray */
+    --primary: #252525;
+    /* Black/Dark for accents */
+    --border-color: #D0D0D0;
+    /* Structural Gray */
+
+    /* Typography */
+    --font-heading: 'Times New Roman', Times, serif;
+    /* Literary feel */
+    --font-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* Clean utility */
+
+    /* Spacing */
+    --spacing-unit: 1rem;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+.page-wrapper {
+    display: flex;
+    min-height: 100vh;
+    max-width: 100%;
+    margin: 0;
+    padding: 4rem;
+    /* Generous padding */
+    gap: 4rem;
+}
+
+/* Left Column: Intro */
+.intro-section {
+    flex: 0 0 30%;
+    position: sticky;
+    top: 4rem;
+    height: fit-content;
+    padding-right: 2rem;
+    border-right: 1px solid var(--border-color);
+    /* Vertical divider */
+}
+
+.intro-section h1 {
+    font-family: var(--font-heading);
+    font-size: 3rem;
+    font-weight: 400;
+    /* Lighter weight for serif */
+    line-height: 1.1;
+    margin-bottom: 2rem;
+    letter-spacing: -0.01em;
+}
+
+.intro-section p {
+    color: var(--text-main);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    max-width: 100%;
+    font-weight: 400;
+}
+
+/* Right Column: Team List */
+.team-list {
+    flex: 1;
+}
+
+.squad-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    /* Gap for borders */
+    background-color: var(--border-color);
+    /* Creates the grid lines */
+    border: 1px solid var(--border-color);
+}
+
+.profile-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 2rem;
+    background-color: var(--bg-color);
+    /* White/Cream on top of grid */
+    transition: background-color 0.3s ease;
+}
+
+.profile-item:hover {
+    background-color: #fff;
+    /* Slight brighten on hover */
+}
+
+.avatar {
+    width: 150px;
+    /* Large, prominent avatars */
+    height: 150px;
+    border-radius: 0;
+    /* Sharp corners or very slight radius if preferred, Aesop uses sharp images mostly but avatars can be round or sharp. Let's go with sharp for strict grid or keep round for people. Keeping round for now as it contrasts well with the strict grid. */
+    object-fit: cover;
+    margin-bottom: 1.5rem;
+    filter: grayscale(100%);
+    /* Artistic touch */
+    transition: filter 0.3s ease;
+}
+
+.profile-item:hover .avatar {
+    filter: grayscale(0%);
+    /* Reveal color on hover */
+}
+
+.profile-info {
+    width: 100%;
+}
+
+.name {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+.role {
+    color: var(--text-main);
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.bio {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* Home Page Selection */
+.home-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1px;
+    background-color: var(--border-color);
+    border: 1px solid var(--border-color);
+    margin-top: 3rem;
+}
+
+.team-card {
+    background: var(--bg-color);
+    padding: 3rem;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: background-color 0.3s ease;
+}
+
+.team-card:hover {
+    background-color: #fff;
+}
+
+.team-card h2 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 400;
+    margin-bottom: 1rem;
+    color: var(--text-main);
+}
+
+.team-card p {
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+    flex-grow: 1;
+    font-size: 1rem;
+}
+
+.btn-view {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background-color: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--text-main);
+    font-weight: 400;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: fit-content;
+}
+
+.team-card:hover .btn-view {
+    background-color: var(--text-main);
+    color: var(--bg-color);
+}
+
+/* Navigation */
+.nav-header {
+    margin-bottom: 3rem;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text-main);
+    font-weight: 400;
+    font-size: 0.9rem;
+    transition: opacity 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid transparent;
+}
+
+.btn-back:hover {
+    border-bottom-color: var(--text-main);
+}
+
+@media (max-width: 1024px) {
+    .page-wrapper {
+        flex-direction: column;
+        padding: 2rem;
+        gap: 3rem;
+    }
+
+    .intro-section {
+        position: static;
+        flex: auto;
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 2rem;
+    }
+
+    .intro-section h1 {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .squad-section {
+        grid-template-columns: 1fr;
+    }
+
+    .page-wrapper {
+        padding: 1.5rem;
+    }
+}
