@@ -1,0 +1,9 @@
+import { Outlet } from 'react-router-dom'
+
+export default function AppShell() {
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100">
+      <Outlet />
+    </div>
+  )
+}
