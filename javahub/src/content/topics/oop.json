@@ -1,0 +1,53 @@
+{
+  "id": "oop",
+  "title": "OOP Principles",
+  "group": "Engineering Principles",
+  "estimatedMinutes": 45,
+  "subtopics": [
+    {
+      "id": "encapsulation",
+      "title": "Encapsulation & Information Hiding",
+      "cards": [
+        {
+          "id": "oop-encapsulation-basics",
+          "topicId": "oop",
+          "subtopicId": "encapsulation",
+          "title": "Encapsulation",
+          "difficulty": "Beginner",
+          "explanation": "Encapsulation bundles data (fields) and the methods that operate on that data into a single unit (a class), and restricts direct access to the internal state. Fields should be private; access is controlled through public getters/setters or behaviour-exposing methods. This protects invariants and lets you change the internal implementation without breaking callers.",
+          "codeExample": "// Bad: exposed internals\npublic class BankAccount {\n    public double balance; // anyone can set to negative!\n}\n\n// Good: encapsulated\npublic class BankAccount {\n    private double balance;\n\n    public void deposit(double amount) {\n        if (amount <= 0) throw new IllegalArgumentException(\"Must be positive\");\n        this.balance += amount;\n    }\n\n    public double getBalance() { return balance; }\n\n    // No setBalance() — callers can't bypass business rules\n}",
+          "whyItMatters": "Encapsulation is what makes classes trustworthy units of abstraction — callers don't need to know or care about implementation details.",
+          "gotcha": "Adding a public setter for every private field defeats encapsulation entirely. Only expose what callers actually need."
+        }
+      ]
+    },
+    {
+      "id": "polymorphism",
+      "title": "Polymorphism & Interfaces",
+      "cards": [
+        {
+          "id": "oop-polymorphism-basics",
+          "topicId": "oop",
+          "subtopicId": "polymorphism",
+          "title": "Runtime Polymorphism",
+          "difficulty": "Beginner",
+          "explanation": "Runtime polymorphism (dynamic dispatch) allows a reference of a supertype to point to an object of any subtype, and the correct overridden method is called at runtime based on the actual object type. In Java this is achieved through method overriding and interfaces. It is the mechanism that makes the Open/Closed Principle possible.",
+          "codeExample": "interface Shape {\n    double area();\n}\n\nclass Circle implements Shape {\n    private final double radius;\n    Circle(double r) { this.radius = r; }\n    @Override public double area() { return Math.PI * radius * radius; }\n}\n\nclass Rectangle implements Shape {\n    private final double w, h;\n    Rectangle(double w, double h) { this.w = w; this.h = h; }\n    @Override public double area() { return w * h; }\n}\n\n// Polymorphic call — no instanceof, no casting\nList<Shape> shapes = List.of(new Circle(5), new Rectangle(3, 4));\nshapes.forEach(s -> System.out.println(s.area()));\n// 78.53...\n// 12.0",
+          "whyItMatters": "Polymorphism lets you add new types without modifying existing code — the core of extensible design.",
+          "gotcha": "Overloading (same method name, different parameters) is resolved at compile time based on the reference type, not the runtime type. It is NOT polymorphism and often behaves unexpectedly when combined with inheritance."
+        },
+        {
+          "id": "oop-interface-vs-abstract",
+          "topicId": "oop",
+          "subtopicId": "polymorphism",
+          "title": "Interface vs Abstract Class",
+          "difficulty": "Mid",
+          "explanation": "Use an interface when you want to define a contract that unrelated classes can implement (multiple interfaces are allowed). Use an abstract class when you have shared implementation or state that subclasses should inherit. Since Java 8, interfaces can have default and static methods, narrowing the gap — but abstract classes still own the 'is-a with shared behaviour' use case.",
+          "codeExample": "// Interface: defines what, not how\ninterface Printable {\n    void print();                          // must implement\n    default void printTwice() {            // optional to override\n        print(); print();\n    }\n}\n\n// Abstract class: partial implementation\nabstract class Vehicle {\n    private final String plate;\n    Vehicle(String plate) { this.plate = plate; }  // shared constructor\n    abstract int maxSpeed();               // subclasses define this\n    String info() { return plate + \" @ \" + maxSpeed() + \"km/h\"; } // shared\n}\n\n// A class can do both\nclass Car extends Vehicle implements Printable {\n    Car(String p) { super(p); }\n    @Override public int maxSpeed() { return 200; }\n    @Override public void print() { System.out.println(info()); }\n}",
+          "whyItMatters": "Choosing correctly keeps inheritance hierarchies shallow and avoids fragile base class problems.",
+          "gotcha": "Extending an abstract class consumes your one inheritance slot. Prefer interfaces + composition unless you genuinely need shared state or a constructor."
+        }
+      ]
+    }
+  ]
+}

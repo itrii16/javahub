@@ -1,0 +1,76 @@
+{
+  "id": "java-core",
+  "title": "Java Core & Syntax",
+  "group": "Java Core",
+  "estimatedMinutes": 60,
+  "subtopics": [
+    {
+      "id": "lambdas",
+      "title": "Lambdas & Functional Interfaces",
+      "cards": [
+        {
+          "id": "java-core-lambda-basics",
+          "topicId": "java-core",
+          "subtopicId": "lambdas",
+          "title": "Lambda Expression Basics",
+          "difficulty": "Beginner",
+          "explanation": "A lambda expression is a concise way to represent an anonymous function that can be passed around as a value. It consists of a parameter list, an arrow (->), and a body. Lambdas can only be used where a functional interface (an interface with exactly one abstract method) is expected.",
+          "codeExample": "// Before lambdas\nRunnable r1 = new Runnable() {\n    @Override\n    public void run() {\n        System.out.println(\"Hello\");\n    }\n};\n\n// With lambda\nRunnable r2 = () -> System.out.println(\"Hello\");\n\n// Lambda with parameter\nComparator<String> comp = (a, b) -> a.compareTo(b);\n\n// Method reference equivalent\nComparator<String> comp2 = String::compareTo;",
+          "whyItMatters": "Lambdas are the foundation of Java's functional programming features and are used everywhere in Streams, CompletableFuture, and event handling.",
+          "gotcha": "Lambdas can only capture effectively final local variables. If you try to modify a captured variable inside a lambda, the compiler will throw an error.",
+          "tryItUrl": "https://jdoodle.com/ia/1BZ"
+        },
+        {
+          "id": "java-core-functional-interfaces",
+          "topicId": "java-core",
+          "subtopicId": "lambdas",
+          "title": "Built-in Functional Interfaces",
+          "difficulty": "Beginner",
+          "explanation": "Java provides four core functional interfaces in java.util.function: Function<T,R> (takes T, returns R), Consumer<T> (takes T, returns void), Supplier<T> (takes nothing, returns T), and Predicate<T> (takes T, returns boolean). These cover most use cases and are the building blocks for the Stream API.",
+          "codeExample": "Function<String, Integer> strLen = String::length;\nConsumer<String> printer = System.out::println;\nSupplier<List<String>> listFactory = ArrayList::new;\nPredicate<String> isEmpty = String::isEmpty;\n\n// Composing functions\nFunction<String, String> trim = String::trim;\nFunction<String, Integer> trimAndCount = trim.andThen(strLen);\nSystem.out.println(trimAndCount.apply(\"  hello  \")); // 5",
+          "whyItMatters": "Understanding these four interfaces is enough to read and write 90% of lambda-heavy Java code.",
+          "gotcha": "Function.andThen() vs Function.compose() — andThen applies the second function after, compose applies it before. Getting them backwards is a common bug."
+        }
+      ]
+    },
+    {
+      "id": "streams",
+      "title": "Stream API",
+      "cards": [
+        {
+          "id": "java-core-stream-pipeline",
+          "topicId": "java-core",
+          "subtopicId": "streams",
+          "title": "Stream Pipeline: Source → Intermediate → Terminal",
+          "difficulty": "Beginner",
+          "explanation": "A Stream pipeline has three parts: a source (collection, array, or generator), zero or more intermediate operations (filter, map, sorted — these are lazy and return a new Stream), and exactly one terminal operation (collect, forEach, reduce — this triggers evaluation). Streams are single-use: once a terminal operation is called, the stream is consumed and cannot be reused.",
+          "codeExample": "List<String> names = List.of(\"Alice\", \"Bob\", \"Charlie\", \"Dave\");\n\nList<String> result = names.stream()          // source\n    .filter(n -> n.length() > 3)              // intermediate (lazy)\n    .map(String::toUpperCase)                 // intermediate (lazy)\n    .sorted()                                 // intermediate (lazy)\n    .collect(Collectors.toList());            // terminal (triggers eval)\n\n// result: [ALICE, CHARLIE, DAVE]",
+          "whyItMatters": "Streams replace verbose for-loops with readable, composable pipelines and enable parallel processing with a single .parallel() call.",
+          "gotcha": "Intermediate operations are lazy — no work happens until a terminal operation is called. Calling .filter() alone does nothing and won't throw even on a null stream source."
+        },
+        {
+          "id": "java-core-stream-collectors",
+          "topicId": "java-core",
+          "subtopicId": "streams",
+          "title": "Collectors: groupingBy, partitioningBy, toMap",
+          "difficulty": "Mid",
+          "explanation": "The Collectors utility class provides pre-built collectors for common aggregation patterns. groupingBy partitions elements into a Map by a classifier function. partitioningBy is a special case that splits into true/false groups. toMap converts a stream into a Map with key and value extractor functions.",
+          "codeExample": "List<String> words = List.of(\"apple\", \"ant\", \"banana\", \"avocado\", \"blueberry\");\n\n// Group by first letter\nMap<Character, List<String>> byLetter = words.stream()\n    .collect(Collectors.groupingBy(w -> w.charAt(0)));\n// {a=[apple, ant, avocado], b=[banana, blueberry]}\n\n// Partition by length\nMap<Boolean, List<String>> byLength = words.stream()\n    .collect(Collectors.partitioningBy(w -> w.length() > 5));\n// {false=[apple, ant], true=[banana, avocado, blueberry]}\n\n// toMap: word -> length\nMap<String, Integer> wordLengths = words.stream()\n    .collect(Collectors.toMap(w -> w, String::length));",
+          "whyItMatters": "groupingBy is used constantly for reporting, analytics, and data transformation. It replaces nested loops and temporary maps.",
+          "gotcha": "toMap throws IllegalStateException on duplicate keys. Use the merge function overload: Collectors.toMap(keyFn, valueFn, (v1, v2) -> v1) to handle duplicates."
+        },
+        {
+          "id": "java-core-optional",
+          "topicId": "java-core",
+          "subtopicId": "streams",
+          "title": "Optional — Avoiding NullPointerException",
+          "difficulty": "Beginner",
+          "explanation": "Optional<T> is a container that may or may not hold a value. It forces callers to explicitly handle the absent case, making null-related bugs visible at compile time. Use it as a return type when a method legitimately might return nothing. Do not use it as a field type, method parameter, or in collections.",
+          "codeExample": "// Creating\nOptional<String> present = Optional.of(\"hello\");\nOptional<String> empty = Optional.empty();\nOptional<String> nullable = Optional.ofNullable(null); // safe\n\n// Consuming\nString value = present.orElse(\"default\");\nString computed = empty.orElseGet(() -> expensiveDefault());\n\n// Chaining (like a null-safe pipeline)\nOptional<Integer> length = Optional.ofNullable(getUserName())\n    .map(String::trim)\n    .filter(s -> !s.isEmpty())\n    .map(String::length);\n\n// Anti-pattern: don't do this\nif (optional.isPresent()) { optional.get(); } // defeats the purpose",
+          "whyItMatters": "Properly used, Optional makes APIs self-documenting about nullability and eliminates entire classes of NPE bugs.",
+          "gotcha": "Optional.get() without isPresent() check throws NoSuchElementException — just as bad as NPE. Always use orElse, orElseGet, or ifPresent instead."
+        }
+      ]
+    }
+  ]
+}

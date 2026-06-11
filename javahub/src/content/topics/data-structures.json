@@ -1,0 +1,69 @@
+{
+  "id": "data-structures",
+  "title": "Data Structures in Java",
+  "group": "Data Structures",
+  "estimatedMinutes": 90,
+  "subtopics": [
+    {
+      "id": "hash-tables",
+      "title": "Hash Tables",
+      "cards": [
+        {
+          "id": "ds-hashmap-internals",
+          "topicId": "data-structures",
+          "subtopicId": "hash-tables",
+          "title": "HashMap Internals",
+          "difficulty": "Mid",
+          "explanation": "A HashMap stores key-value pairs in an array of buckets. The bucket index is computed from the key's hashCode(). When two keys hash to the same bucket (collision), Java uses a linked list (and a red-black tree when the list exceeds 8 entries, since Java 8). The default load factor is 0.75 — when 75% of buckets are filled, the table doubles in size and rehashes all entries.",
+          "codeExample": "Map<String, Integer> map = new HashMap<>();\nmap.put(\"alice\", 30);\nmap.put(\"bob\", 25);\n\n// O(1) average get\nint age = map.get(\"alice\");  // 30\n\n// Merge pattern (avoid get + put)\nmap.merge(\"alice\", 1, Integer::sum);  // increments alice's value by 1\n\n// computeIfAbsent — lazy initialization\nMap<String, List<String>> groups = new HashMap<>();\ngroups.computeIfAbsent(\"team-a\", k -> new ArrayList<>()).add(\"alice\");",
+          "whyItMatters": "HashMap is the most used data structure in Java after arrays. Understanding internals lets you tune initial capacity, avoid rehashing on large loads, and debug subtle equals/hashCode bugs.",
+          "gotcha": "If you override equals() you MUST override hashCode() consistently — objects that are equal must have the same hash code. Failing to do this breaks HashMap, HashSet, and any hash-based collection.",
+          "jdkClass": "java.util.HashMap",
+          "vsComparison": "Use HashMap for O(1) get/put with no ordering. Use LinkedHashMap to preserve insertion order. Use TreeMap for sorted key order (O(log n) operations).",
+          "complexityTable": [
+            { "operation": "Get", "best": "O(1)", "average": "O(1)", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Put", "best": "O(1)", "average": "O(1)", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Remove", "best": "O(1)", "average": "O(1)", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Contains key", "best": "O(1)", "average": "O(1)", "worst": "O(n)", "space": "O(1)" }
+          ]
+        },
+        {
+          "id": "ds-hashmap-equals-hashcode",
+          "topicId": "data-structures",
+          "subtopicId": "hash-tables",
+          "title": "equals() and hashCode() Contract",
+          "difficulty": "Mid",
+          "explanation": "The Java equals/hashCode contract has two rules: (1) if a.equals(b) then a.hashCode() == b.hashCode() must be true, and (2) hashCode() must be consistent — calling it multiple times on the same object must return the same value as long as the object hasn't changed. Breaking rule 1 makes objects impossible to find in HashMap/HashSet after insertion.",
+          "codeExample": "// Broken: equals without hashCode\npublic class Point {\n    int x, y;\n    @Override public boolean equals(Object o) {\n        if (!(o instanceof Point p)) return false;\n        return x == p.x && y == p.y;\n    }\n    // Missing hashCode! HashMap will never find inserted Points\n}\n\n// Correct\npublic class Point {\n    int x, y;\n    @Override public boolean equals(Object o) {\n        if (!(o instanceof Point p)) return false;\n        return x == p.x && y == p.y;\n    }\n    @Override public int hashCode() {\n        return Objects.hash(x, y);  // consistent with equals\n    }\n}",
+          "whyItMatters": "This contract is one of the most common sources of subtle bugs in Java — objects disappear silently from sets and maps.",
+          "gotcha": "Using a mutable field in hashCode() is dangerous — if you mutate the field after inserting the object into a HashSet, you'll never find it again because the hash changed.",
+          "jdkClass": "java.util.Objects"
+        }
+      ]
+    },
+    {
+      "id": "arrays-strings",
+      "title": "Arrays & Strings",
+      "cards": [
+        {
+          "id": "ds-string-vs-stringbuilder",
+          "topicId": "data-structures",
+          "subtopicId": "arrays-strings",
+          "title": "String vs StringBuilder vs StringBuffer",
+          "difficulty": "Beginner",
+          "explanation": "String is immutable — every concatenation creates a new object. StringBuilder is mutable and not thread-safe, making it the right choice for building strings in a single thread. StringBuffer is identical to StringBuilder but all methods are synchronized, making it thread-safe but slower. In practice, prefer StringBuilder; StringBuffer is rarely needed since better concurrency tools exist.",
+          "codeExample": "// Bad: O(n²) due to repeated String allocation\nString result = \"\";\nfor (int i = 0; i < 1000; i++) {\n    result += i;  // creates a new String each iteration!\n}\n\n// Good: O(n) with StringBuilder\nStringBuilder sb = new StringBuilder();\nfor (int i = 0; i < 1000; i++) {\n    sb.append(i);\n}\nString result = sb.toString();\n\n// Note: the compiler optimises simple + in a single expression\nString s = \"Hello\" + \" \" + \"World\"; // compiled to StringBuilder internally",
+          "whyItMatters": "String concatenation in a loop is one of the most common performance bugs in Java. StringBuilder is the standard fix.",
+          "gotcha": "The compiler auto-optimises String + in a single expression, but NOT across loop iterations. Only the loop case is actually slow.",
+          "jdkClass": "java.lang.StringBuilder",
+          "vsComparison": "String for immutable values, StringBuilder for single-threaded construction, StringBuffer only when truly needed across threads (rare — use other approaches instead).",
+          "complexityTable": [
+            { "operation": "Append", "best": "O(1)*", "average": "O(1)*", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Insert at index", "best": "O(n)", "average": "O(n)", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "toString()", "best": "O(n)", "average": "O(n)", "worst": "O(n)", "space": "O(n)" }
+          ]
+        }
+      ]
+    }
+  ]
+}
