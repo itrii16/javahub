@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import AppShell from '@/components/layout/AppShell'
+import { topicMap } from '@/content'
 import HomePage from '@/pages/HomePage'
 import TopicPage from '@/pages/TopicPage'
 import CardDetailPage from '@/pages/CardDetailPage'
@@ -18,7 +19,10 @@ export const router = createBrowserRouter([
         path: 'topic/:topicId',
         element: <TopicPage />,
         handle: {
-          crumb: () => 'Topic',
+          crumb: (data: unknown, params?: Record<string, string>) => {
+            const topic = params?.topicId ? topicMap[params.topicId] : null
+            return topic?.title ?? 'Topic'
+          },
         },
       },
       {
