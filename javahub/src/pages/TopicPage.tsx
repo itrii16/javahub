@@ -43,20 +43,21 @@ export default function TopicPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+      {/* Topic header */}
       <div className="mb-6">
-        <div className="flex items-start justify-between gap-4 mb-2">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{topic.group}</p>
-            <h1 className="text-2xl font-bold text-gray-100">{topic.title}</h1>
+        <div className="mb-2">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{topic.group}</p>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-100">{topic.title}</h1>
+            <Link
+              to={`/topic/${topic.id}/study`}
+              className="flex-shrink-0 px-3 py-1.5 md:px-4 md:py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Study →
+            </Link>
           </div>
-          <Link
-            to={`/topic/${topic.id}/study`}
-            className="flex-shrink-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            Study flashcards →
-          </Link>
         </div>
-        <div className="flex items-center gap-4 text-sm text-gray-400">
+        <div className="flex items-center gap-3 text-sm text-gray-400 flex-wrap">
           <span>⏱ ~{topic.estimatedMinutes} min</span>
           <span>{allCards.length} cards</span>
           <span>{masteredCount} mastered</span>
@@ -70,12 +71,13 @@ export default function TopicPage() {
         <p className="mt-1 text-xs text-gray-500">{progressPct}% mastered</p>
       </div>
 
-      <div className="flex items-center gap-2 mb-6">
+      {/* Difficulty filter — scrollable on mobile */}
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
         {DIFFICULTIES.map(d => (
           <button
             key={d}
             onClick={() => setDifficultyFilter(d)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
               difficultyFilter === d
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
@@ -89,6 +91,7 @@ export default function TopicPage() {
         ))}
       </div>
 
+      {/* Cards grouped by subtopic */}
       {topic.subtopics.map(subtopic => {
         const filtered = subtopic.cards.filter(
           card => difficultyFilter === 'All' || card.difficulty === difficultyFilter

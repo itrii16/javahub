@@ -20,7 +20,11 @@ function groupTopics() {
   return map
 }
 
-export default function Sidebar() {
+interface Props {
+  onNavigate?: () => void
+}
+
+export default function Sidebar({ onNavigate }: Props) {
   const { topicId } = useParams()
   const grouped = groupTopics()
 
@@ -54,7 +58,8 @@ export default function Sidebar() {
                   <div className="flex items-center">
                     <Link
                       to={`/topic/${topic.id}`}
-                      className={`flex-1 px-4 py-2 text-sm transition-colors truncate ${
+                      onClick={onNavigate}
+                      className={`flex-1 px-4 py-2.5 text-sm transition-colors truncate ${
                         isActive
                           ? 'text-indigo-400 bg-indigo-500/10 font-medium'
                           : 'text-gray-300 hover:text-gray-100 hover:bg-gray-800'
@@ -65,7 +70,7 @@ export default function Sidebar() {
                     {topic.subtopics.length > 1 && (
                       <button
                         onClick={() => toggle(topic.id)}
-                        className="px-2 py-2 text-gray-500 hover:text-gray-300 transition-colors"
+                        className="px-3 py-2.5 text-gray-500 hover:text-gray-300 transition-colors"
                         aria-label={isExpanded ? 'Collapse' : 'Expand'}
                       >
                         <span className={`text-xs transition-transform inline-block ${isExpanded ? 'rotate-90' : ''}`}>
@@ -78,7 +83,8 @@ export default function Sidebar() {
                     <Link
                       key={sub.id}
                       to={`/topic/${topic.id}#${sub.id}`}
-                      className="block pl-8 pr-4 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors truncate"
+                      onClick={onNavigate}
+                      className="block pl-8 pr-4 py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors truncate"
                     >
                       {sub.title}
                     </Link>
