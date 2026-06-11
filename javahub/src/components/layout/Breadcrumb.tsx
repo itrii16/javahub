@@ -1,7 +1,7 @@
 import { Link, useMatches } from 'react-router-dom'
 
 interface BreadcrumbHandle {
-  crumb: (data: unknown) => React.ReactNode
+  crumb: (data: unknown, params?: Record<string, string>) => React.ReactNode
 }
 
 export default function Breadcrumb() {
@@ -11,7 +11,7 @@ export default function Breadcrumb() {
     .filter(m => (m.handle as BreadcrumbHandle)?.crumb)
     .map(m => ({
       id: m.id,
-      crumb: (m.handle as BreadcrumbHandle).crumb(m.data),
+      crumb: (m.handle as BreadcrumbHandle).crumb(m.data, m.params as Record<string, string>),
       pathname: m.pathname,
     }))
 
