@@ -1,0 +1,75 @@
+{
+  "id": "logging-observability",
+  "title": "Logging & Observability",
+  "group": "Architecture & Design",
+  "estimatedMinutes": 45,
+  "subtopics": [
+    {
+      "id": "structured-logging",
+      "title": "Structured Logging",
+      "cards": [
+        {
+          "id": "logging-observability-structured-logging-slf4j",
+          "topicId": "logging-observability",
+          "subtopicId": "structured-logging",
+          "title": "SLF4J, Logback & Log Levels",
+          "difficulty": "Beginner",
+          "explanation": "SLF4J (Simple Logging Facade for Java) is the logging API used in code — it decouples application code from the logging implementation. Logback is the standard implementation. Log levels from least to most severe: TRACE (fine-grained, dev only), DEBUG (diagnostic info), INFO (normal operation milestones), WARN (recoverable issues), ERROR (failures requiring attention). Always use parameterized logging (log.info(\"User {} logged in\", userId)) — never string concatenation — so the string is only built if the log level is active.",
+          "codeExample": "// Declare logger (Lombok: use @Slf4j on the class)\nprivate static final Logger log = LoggerFactory.getLogger(OrderService.class);\n\n// Parameterised logging — string only built if DEBUG is enabled\nlog.debug(\"Processing order {} for customer {}\", orderId, customerId);\n\n// String concatenation is wasteful — always built regardless of level:\nlog.debug(\"Processing order \" + orderId + \" for customer \" + customerId); // BAD\n\n// Exception logging — always include the exception as last argument\ntry {\n    payment.charge(order);\n} catch (PaymentException e) {\n    log.error(\"Payment failed for order {}\", order.getId(), e); // e = stack trace\n}\n\n// MDC (Mapped Diagnostic Context) — thread-local context added to every log line\nMDC.put(\"userId\", String.valueOf(userId));\nMDC.put(\"requestId\", UUID.randomUUID().toString());\ntry {\n    processOrder(order); // all logs within include userId and requestId\n} finally {\n    MDC.clear(); // MUST clear — threads are reused in pools\n}\n\n// logback.xml: configure appenders, patterns, levels\n// Production: set root level to INFO, specific packages to DEBUG as needed",
+          "whyItMatters": "Parameterized logging is both a performance best practice and the foundation of structured logging. MDC adds request-scoped context (user ID, request ID) to every log line without threading it through every method call — invaluable for tracing a user's session in production.",
+          "gotcha": "MDC uses ThreadLocal, which means it doesn't propagate automatically to threads spawned via CompletableFuture or @Async. You must explicitly copy the MDC: Map<String, String> ctx = MDC.getCopyOfContextMap(); then set it in the child thread with MDC.setContextMap(ctx)."
+        },
+        {
+          "id": "logging-observability-structured-logging-json",
+          "topicId": "logging-observability",
+          "subtopicId": "structured-logging",
+          "title": "Structured JSON Logging",
+          "difficulty": "Mid",
+          "explanation": "Plain-text logs are human-readable but machine-painful: parsing log lines with regex is brittle and slow. Structured logging emits JSON — each log event is a JSON object with consistent field names (timestamp, level, message, traceId, userId, duration). Log aggregation platforms (ELK, Grafana Loki, Splunk, Datadog) can then filter, group, and alert on specific fields. The logstash-logback-encoder library converts Logback output to JSON with minimal config.",
+          "codeExample": "<!-- pom.xml: logstash-logback-encoder -->\n<dependency>\n  <groupId>net.logstash.logback</groupId>\n  <artifactId>logstash-logback-encoder</artifactId>\n  <version>7.4</version>\n</dependency>\n\n<!-- logback.xml: JSON appender -->\n<appender name=\"JSON\" class=\"ch.qos.logback.core.ConsoleAppender\">\n  <encoder class=\"net.logstash.logback.encoder.LogstashEncoder\"/>\n</appender>\n\n// Output (one line, pretty-printed for readability):\n// {\n//   \"@timestamp\": \"2025-01-15T10:30:00.000Z\",\n//   \"level\": \"INFO\",\n//   \"message\": \"Order placed\",\n//   \"logger_name\": \"com.app.OrderService\",\n//   \"traceId\": \"abc123\",\n//   \"userId\": \"42\",\n//   \"orderId\": \"99\"\n// }\n\n// Add custom fields to individual log statements\nlog.info(\"Order placed\",\n    StructuredArguments.keyValue(\"orderId\", order.getId()),\n    StructuredArguments.keyValue(\"total\", order.getTotal()));\n// → {\"message\":\"Order placed\",\"orderId\":99,\"total\":49.99,...}\n\n// Avoid logging sensitive data in structured fields:\n// NEVER: keyValue(\"password\", req.getPassword())\n// NEVER: keyValue(\"creditCard\", payment.getCardNumber())",
+          "whyItMatters": "Structured logs enable querying like a database: find all ERROR logs for userId=42 in the last hour, or graph the average order.total over time. Plain-text logs require regex parsing that breaks whenever a message template changes.",
+          "gotcha": "Structured logging accidentally logging PII (names, emails, card numbers) as JSON fields is a compliance risk (GDPR, PCI DSS). Audit your log statements before going to production and mask or exclude sensitive fields."
+        },
+        {
+          "id": "logging-observability-structured-logging-correlation-ids",
+          "topicId": "logging-observability",
+          "subtopicId": "structured-logging",
+          "title": "Correlation IDs & Request Tracing",
+          "difficulty": "Mid",
+          "explanation": "A correlation ID (trace ID) is a UUID generated at the entry point of a request and included in every log line throughout its lifecycle — across threads, service calls, and downstream systems. Without it, diagnosing a production issue means guessing which of thousands of interleaved log lines belong to the same request. Incoming requests should forward the ID in a standard header (X-Correlation-ID or traceparent from W3C); services should propagate it to all downstream HTTP calls.",
+          "codeExample": "// 1. Generate or forward correlation ID at the entry point\n@Component\npublic class CorrelationIdFilter extends OncePerRequestFilter {\n    @Override\n    protected void doFilterInternal(HttpServletRequest req,\n                                    HttpServletResponse res,\n                                    FilterChain chain) throws IOException, ServletException {\n        String id = Optional.ofNullable(req.getHeader(\"X-Correlation-ID\"))\n            .orElse(UUID.randomUUID().toString());\n        MDC.put(\"correlationId\", id);\n        res.addHeader(\"X-Correlation-ID\", id); // echo back to client\n        try {\n            chain.doFilter(req, res);\n        } finally {\n            MDC.remove(\"correlationId\");\n        }\n    }\n}\n\n// 2. Propagate to downstream HTTP calls\n@Bean\npublic RestTemplate restTemplate() {\n    RestTemplate rt = new RestTemplate();\n    rt.getInterceptors().add((request, body, execution) -> {\n        String id = MDC.get(\"correlationId\");\n        if (id != null) request.getHeaders().add(\"X-Correlation-ID\", id);\n        return execution.execute(request, body);\n    });\n    return rt;\n}\n\n// 3. For async (CompletableFuture / @Async): copy MDC to child thread\nMap<String, String> ctx = MDC.getCopyOfContextMap();\nCompletableFuture.runAsync(() -> {\n    MDC.setContextMap(ctx);\n    try { processAsync(); } finally { MDC.clear(); }\n});",
+          "whyItMatters": "Correlation IDs are the minimum viable distributed tracing. In a microservices system, a single user request may touch 5 services and generate 500 log lines. A correlation ID lets you grep all 500 lines instantly: grep 'correlationId: abc-123' *.log",
+          "gotcha": "OpenTelemetry's traceparent header is the W3C-standard replacement for custom X-Correlation-ID headers. If you're adding distributed tracing now, adopt OpenTelemetry from the start — it propagates automatically via the OTel Java agent and integrates with all major backends (Jaeger, Zipkin, Datadog, Honeycomb)."
+        }
+      ]
+    },
+    {
+      "id": "tracing-metrics",
+      "title": "Distributed Tracing & Metrics",
+      "cards": [
+        {
+          "id": "logging-observability-tracing-metrics-tracing",
+          "topicId": "logging-observability",
+          "subtopicId": "tracing-metrics",
+          "title": "Distributed Tracing with OpenTelemetry",
+          "difficulty": "Mid",
+          "explanation": "Distributed tracing follows a request across service boundaries. A trace is the full journey; a span is one unit of work within a service (an HTTP handler, a DB query, an external call). Spans have a parent-child relationship forming a tree. OpenTelemetry (OTel) is the vendor-neutral standard — the Java agent instruments your app automatically (Spring, JDBC, HTTP clients) with zero code changes. Traces are exported to a backend (Jaeger, Zipkin, Grafana Tempo, Datadog).",
+          "codeExample": "<!-- Auto-instrumentation: attach OTel Java agent at startup -->\n<!-- No code changes needed for Spring Boot apps -->\n# -javaagent:opentelemetry-javaagent.jar\n# -Dotel.service.name=order-service\n# -Dotel.exporter.otlp.endpoint=http://otel-collector:4317\n\n// Manual instrumentation for custom spans\n@Autowired Tracer tracer;\n\npublic PaymentResult chargeWithTracing(Order order) {\n    Span span = tracer.spanBuilder(\"payment.charge\")\n        .setAttribute(\"order.id\", order.getId())\n        .setAttribute(\"amount\", order.getTotal().toString())\n        .startSpan();\n    try (Scope scope = span.makeCurrent()) {\n        PaymentResult result = paymentClient.charge(order);\n        span.setAttribute(\"payment.status\", result.status());\n        return result;\n    } catch (Exception e) {\n        span.recordException(e);\n        span.setStatus(StatusCode.ERROR);\n        throw e;\n    } finally {\n        span.end();\n    }\n}\n\n// Micrometer Tracing (Spring Boot 3+): wraps OTel or Brave\n// application.properties:\nmanagement.tracing.sampling.probability=1.0  // sample 100% in dev\nmanagement.tracing.sampling.probability=0.1  // 10% in prod (cost control)",
+          "whyItMatters": "Logs tell you what happened on one service. Traces show you the full request path across all services, with timing for each hop. A 2-second API response that spans 5 services — a trace instantly shows which service consumed 1.8 of those seconds.",
+          "gotcha": "Sampling is critical in production. 100% sampling generates enormous volumes of trace data. Start at 10%, use tail-based sampling (capture 100% of erroring traces, 10% of successful ones) via the OTel Collector to get full coverage of failures without the cost of full coverage."
+        },
+        {
+          "id": "logging-observability-tracing-metrics-micrometer",
+          "topicId": "logging-observability",
+          "subtopicId": "tracing-metrics",
+          "title": "Metrics with Micrometer",
+          "difficulty": "Mid",
+          "explanation": "Micrometer is to metrics what SLF4J is to logging — a vendor-neutral facade. It supports Counter (things that happen: requests, errors), Gauge (current state: queue size, active sessions), Timer (duration of operations: request latency with histogram), and DistributionSummary (sizes: payload bytes). Metrics are tagged (labeled) for multi-dimensional querying. The standard pipeline: Micrometer → Prometheus scrapes → Grafana visualises → Alertmanager fires alerts.",
+          "codeExample": "// Spring Boot Actuator auto-exposes /actuator/prometheus\n// pom.xml: micrometer-registry-prometheus\n\n@Service\npublic class OrderService {\n    private final Counter ordersPlaced;\n    private final Timer checkoutDuration;\n    private final AtomicInteger activeCheckouts;\n\n    public OrderService(MeterRegistry registry) {\n        this.ordersPlaced = Counter.builder(\"orders.placed\")\n            .description(\"Total orders placed\")\n            .tag(\"region\", \"eu-west\")\n            .register(registry);\n\n        this.checkoutDuration = Timer.builder(\"checkout.duration\")\n            .description(\"Time to complete checkout\")\n            .publishPercentiles(0.5, 0.95, 0.99) // p50, p95, p99\n            .register(registry);\n\n        Gauge.builder(\"checkouts.active\", activeCheckouts, AtomicInteger::get)\n            .description(\"Currently in-flight checkouts\")\n            .register(registry);\n    }\n\n    public Order placeOrder(Cart cart) {\n        activeCheckouts.incrementAndGet();\n        return checkoutDuration.record(() -> {\n            Order order = doCheckout(cart);\n            ordersPlaced.increment();\n            return order;\n        });\n    }\n}\n\n// Prometheus query: p99 checkout latency\n// histogram_quantile(0.99, rate(checkout_duration_seconds_bucket[5m]))",
+          "whyItMatters": "Metrics are the foundation of SLOs (Service Level Objectives). Without p95/p99 latency metrics, you're flying blind — you don't know if your API is fast for 99% of users but terrible for 1%. Micrometer makes instrumentation simple enough that there's no excuse for unmonitored services.",
+          "gotcha": "High-cardinality tags (using userId or orderId as a tag) can cause a metrics explosion — millions of unique label combinations that overwhelm Prometheus. Tags must have low cardinality (status codes, regions, endpoint names). Use tracing, not metrics, for per-request data."
+        }
+      ]
+    }
+  ]
+}

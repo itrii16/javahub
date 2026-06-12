@@ -1,0 +1,75 @@
+{
+  "id": "architecture-patterns",
+  "title": "Architecture Patterns",
+  "group": "Architecture & Design",
+  "estimatedMinutes": 75,
+  "subtopics": [
+    {
+      "id": "layered-hex",
+      "title": "Layered & Hexagonal Architecture",
+      "cards": [
+        {
+          "id": "architecture-patterns-layered-hex-layered",
+          "topicId": "architecture-patterns",
+          "subtopicId": "layered-hex",
+          "title": "Layered (N-Tier) Architecture",
+          "difficulty": "Beginner",
+          "explanation": "Layered architecture organises code into horizontal layers where each layer only depends on the layer directly below it. The typical Java stack: Presentation (REST controllers), Service/Application (business logic), Domain (entities, value objects), and Infrastructure/Repository (DB, external APIs). Strict layering means a controller never talks directly to a repository. The main risks are an anemic domain model (all logic in services, entities are just data bags) and layers becoming pass-through wrappers.",
+          "codeExample": "// Typical Spring layered structure\n// Presentation layer\n@RestController\n@RequestMapping(\"/orders\")\npublic class OrderController {\n    private final OrderService service;\n    @PostMapping\n    public ResponseEntity<OrderDto> place(@RequestBody PlaceOrderRequest req) {\n        return ResponseEntity.status(201).body(service.placeOrder(req));\n    }\n}\n\n// Service layer — orchestrates, contains business logic\n@Service\npublic class OrderService {\n    private final OrderRepository repo;\n    private final PaymentGateway payment;\n    public OrderDto placeOrder(PlaceOrderRequest req) {\n        Order order = Order.from(req);   // domain object\n        payment.charge(order.total());  // infrastructure call\n        repo.save(order);               // persistence\n        return OrderDto.from(order);\n    }\n}\n\n// Repository layer — data access only\n@Repository\npublic interface OrderRepository extends JpaRepository<Order, Long> {\n    List<Order> findByCustomerId(long customerId);\n}",
+          "whyItMatters": "Layered architecture is the most common pattern in enterprise Java. Understanding it is prerequisite for reading any Spring Boot codebase. Its main value is familiarity and clear separation of concerns.",
+          "gotcha": "Anemic domain model is the most common layered-architecture smell: Order.java has only getters/setters, and OrderService.java has 500-line methods containing all the business logic. The fix is to push behaviour into the domain objects themselves (e.g. order.addItem(), order.cancel())."
+        },
+        {
+          "id": "architecture-patterns-layered-hex-hexagonal",
+          "topicId": "architecture-patterns",
+          "subtopicId": "layered-hex",
+          "title": "Hexagonal Architecture (Ports & Adapters)",
+          "difficulty": "Mid",
+          "explanation": "Hexagonal architecture (Alistair Cockburn, 2005) puts the application core at the center, surrounded by ports (interfaces) and adapters (implementations). The core contains business logic and depends on nothing outside itself — no Spring, no JPA, no HTTP. Ports are interfaces: inbound (driving) ports are called by the outside world, outbound (driven) ports are called by the core to reach infrastructure. Adapters implement the ports: the HTTP controller is an inbound adapter, the JPA repository is an outbound adapter.",
+          "codeExample": "// Core: pure Java, no framework dependencies\npublic class PlaceOrderUseCase {  // inbound port implementation\n    private final OrderPort orderPort;         // outbound port\n    private final PaymentPort paymentPort;     // outbound port\n\n    public Order execute(PlaceOrderCommand cmd) {\n        Order order = Order.create(cmd.items());\n        paymentPort.charge(order.total(), cmd.paymentMethod());\n        return orderPort.save(order);\n    }\n}\n\n// Outbound port (interface in the core)\npublic interface OrderPort {\n    Order save(Order order);\n    Optional<Order> findById(long id);\n}\n\n// Adapter (infrastructure layer) — implements the port\n@Repository\npublic class JpaOrderAdapter implements OrderPort {\n    private final JpaOrderRepository jpa;\n    public Order save(Order order) { return jpa.save(order); }\n    public Optional<Order> findById(long id) { return jpa.findById(id); }\n}\n\n// Test: swap JPA adapter with in-memory adapter\nclass InMemoryOrderAdapter implements OrderPort {\n    private final Map<Long, Order> store = new HashMap<>();\n    public Order save(Order o) { store.put(o.id(), o); return o; }\n    public Optional<Order> findById(long id) { return Optional.ofNullable(store.get(id)); }\n}",
+          "whyItMatters": "Hexagonal architecture makes the core independently testable without a database, HTTP server, or any infrastructure. Tests run in milliseconds, the core can be reused across multiple delivery mechanisms (REST API, CLI, messaging), and infrastructure can be swapped without touching business logic.",
+          "gotcha": "Hexagonal adds boilerplate — every DB call needs an interface and an adapter. It pays off for complex domains with lots of business logic. For CRUD-heavy microservices with little logic, the overhead often outweighs the benefit."
+        },
+        {
+          "id": "architecture-patterns-layered-hex-package-structure",
+          "topicId": "architecture-patterns",
+          "subtopicId": "layered-hex",
+          "title": "Package by Feature vs Package by Layer",
+          "difficulty": "Mid",
+          "explanation": "Package by layer groups by technical role: com.app.controllers, com.app.services, com.app.repositories. Package by feature groups by business capability: com.app.orders, com.app.payments, com.app.users — each containing its own controller, service, and repository. Package by feature has higher cohesion (everything for one feature is co-located), easier to navigate for new developers, and supports modular decomposition toward microservices. Package by layer is more familiar but creates artificial coupling between unrelated features.",
+          "codeExample": "// Package by LAYER (common, but hard to navigate)\ncom.app\n├── controllers/\n│   ├── OrderController.java\n│   ├── UserController.java\n│   └── PaymentController.java\n├── services/\n│   ├── OrderService.java\n│   ├── UserService.java\n│   └── PaymentService.java\n└── repositories/\n    ├── OrderRepository.java\n    ├── UserRepository.java\n    └── PaymentRepository.java\n\n// Package by FEATURE (preferred for growing codebases)\ncom.app\n├── orders/\n│   ├── OrderController.java\n│   ├── OrderService.java\n│   ├── OrderRepository.java\n│   ├── Order.java             // domain model\n│   └── PlaceOrderRequest.java // DTO\n├── users/\n│   ├── UserController.java\n│   ├── UserService.java\n│   └── ...\n└── payments/\n    └── ...\n// Each feature package is a potential microservice boundary",
+          "whyItMatters": "As a codebase grows, package-by-layer creates directories with dozens of unrelated files. Finding everything related to the 'orders' feature requires jumping between three or more directories. Package-by-feature keeps related code together and makes the business model visible in the package structure.",
+          "gotcha": "Package-by-feature can lead to duplication of small shared utilities (formatters, validators) that don't belong to any single feature. Create a shared or common package for genuinely cross-cutting utilities, but keep it small — the moment it becomes a dumping ground, you've recreated package-by-layer."
+        }
+      ]
+    },
+    {
+      "id": "distributed",
+      "title": "Microservices & Event-Driven",
+      "cards": [
+        {
+          "id": "architecture-patterns-distributed-microservices",
+          "topicId": "architecture-patterns",
+          "subtopicId": "distributed",
+          "title": "Microservices Decomposition",
+          "difficulty": "Mid",
+          "explanation": "A microservice is an independently deployable unit owning a single bounded context (DDD term: the boundary within which a domain model is consistent). Each service owns its data — no shared databases between services. Services communicate via APIs (synchronous) or events (asynchronous). The distributed monolith anti-pattern is the worst outcome: services that are deployed separately but are tightly coupled through a shared database or synchronous chains, combining the complexity of distribution with the fragility of a monolith.",
+          "codeExample": "// Bounded contexts — each service owns its domain\n// Order Service: manages order lifecycle\n// Payment Service: manages payment state\n// Inventory Service: manages stock levels\n\n// Each has its OWN database — no shared schema\norder-service    → orders_db (Postgres)\npayment-service  → payments_db (Postgres)\ninventory-service → inventory_db (MySQL)\n\n// Synchronous (REST/gRPC) — use for queries needing immediate response\nOrderController → GET /inventory/items/42/stock (HTTP)\n\n// Asynchronous (events) — use for state changes\nOrderService.place()  → publishes OrderPlaced event to Kafka\nInventoryService      ← subscribes, reserves stock asynchronously\nPaymentService        ← subscribes, initiates charge asynchronously\n\n// Distributed monolith smell:\nOrderService  →  PaymentService  →  InventoryService  →  ShippingService\n// Four synchronous hops — if any service is slow/down, all fail\n// All services deployed together despite separate repos = pointless complexity",
+          "whyItMatters": "Service boundaries around bounded contexts minimise coupling — changes to payment logic don't require deploying the order service. Data ownership prevents the shared-DB anti-pattern that makes services undeployable independently.",
+          "gotcha": "Don't start with microservices. Start with a well-structured monolith (modular monolith), identify the natural seams via bounded contexts, then extract services when independent scaling or deployment becomes a real need. Premature microservices are a source of immense unnecessary complexity."
+        },
+        {
+          "id": "architecture-patterns-distributed-event-driven",
+          "topicId": "architecture-patterns",
+          "subtopicId": "distributed",
+          "title": "Event-Driven Architecture",
+          "difficulty": "Senior",
+          "explanation": "Event-driven architecture (EDA) uses events to communicate state changes between services. Choreography: services react to events independently (no central coordinator) — low coupling but hard to trace workflows. Orchestration: a central saga orchestrator tells each service what to do — easier to reason about but the orchestrator becomes a coupling point. The Outbox pattern solves the dual-write problem: writing to the DB and publishing an event atomically.",
+          "codeExample": "// Choreography: OrderService publishes, others react\n// OrderService\nordersRepository.save(order);\nkafka.send(\"order.placed\", new OrderPlacedEvent(order.id()));\n\n// InventoryService (separate service, subscribes independently)\n@KafkaListener(topics = \"order.placed\")\npublic void onOrderPlaced(OrderPlacedEvent event) {\n    inventoryService.reserve(event.orderId());\n    kafka.send(\"inventory.reserved\", new InventoryReservedEvent(event.orderId()));\n}\n\n// Outbox pattern — atomic DB write + event publish\n// Problem: what if the app crashes between DB write and Kafka send?\n// Solution: write event to outbox table in same transaction\n@Transactional\npublic void placeOrder(Order order) {\n    orderRepo.save(order);\n    outboxRepo.save(new OutboxEvent(\"order.placed\", order.id())); // same transaction\n    // A separate Outbox relay process reads and publishes to Kafka\n}\n// Guarantees: order saved ↔ event published (atomically)",
+          "whyItMatters": "Events decouple services temporally — the producer doesn't wait for the consumer to finish. This improves resilience (consumers can lag and catch up) and enables fan-out (many consumers react to one event without the producer knowing about them).",
+          "gotcha": "Event-driven systems achieve eventual consistency, not immediate consistency. The UI may show stale data for a few seconds after an action. Design the UX to handle this: optimistic UI updates, loading states, or polling until the event propagates. Unexpected eventual consistency is a source of subtle bugs."
+        }
+      ]
+    }
+  ]
+}
