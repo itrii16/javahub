@@ -1,0 +1,63 @@
+{
+  "id": "concurrency",
+  "title": "Java Concurrency",
+  "topicId": "concurrency",
+  "sections": [
+    {
+      "title": "Thread Primitives",
+      "table": {
+        "headers": ["Primitive", "Key API", "Use for"],
+        "rows": [
+          { "label": "Thread", "columns": ["start(), join(), interrupt(), sleep()", "Raw thread management (rarely used directly)"] },
+          { "label": "Runnable", "columns": ["run()", "Task without return value"] },
+          { "label": "Callable<V>", "columns": ["call() throws Exception", "Task with return value + checked exceptions"] },
+          { "label": "Future<V>", "columns": ["get(), cancel(), isDone()", "Async result — blocks on get()"] },
+          { "label": "CompletableFuture<V>", "columns": ["thenApply, thenCompose, exceptionally, allOf", "Non-blocking async pipelines (Java 8+)"] },
+          { "label": "volatile", "columns": ["keyword on field", "Visibility guarantee; no atomicity"] },
+          { "label": "synchronized", "columns": ["method or block", "Mutual exclusion; monitors"] }
+        ]
+      }
+    },
+    {
+      "title": "Locks (java.util.concurrent.locks)",
+      "table": {
+        "headers": ["Lock", "Key API", "Advantage over synchronized"],
+        "rows": [
+          { "label": "ReentrantLock", "columns": ["lock(), unlock(), tryLock(timeout)", "Timed/interruptible lock, fairness option"] },
+          { "label": "ReentrantReadWriteLock", "columns": ["readLock(), writeLock()", "Multiple concurrent readers, exclusive writer"] },
+          { "label": "StampedLock (Java 8+)", "columns": ["readLock(), writeLock(), tryOptimisticRead()", "Optimistic reads — fastest for read-heavy"] },
+          { "label": "Condition", "columns": ["await(), signal(), signalAll()", "Fine-grained wait/notify (replaces wait/notifyAll)"] }
+        ]
+      }
+    },
+    {
+      "title": "Executor Service",
+      "table": {
+        "headers": ["Factory method", "Thread pool type", "Use for"],
+        "rows": [
+          { "label": "newFixedThreadPool(n)", "columns": ["n threads", "Bounded, predictable workloads"] },
+          { "label": "newCachedThreadPool()", "columns": ["Unbounded, reuses idle threads", "Many short-lived tasks"] },
+          { "label": "newSingleThreadExecutor()", "columns": ["1 thread, sequential", "Ordered processing, single-threaded actor"] },
+          { "label": "newScheduledThreadPool(n)", "columns": ["Scheduled/recurring tasks", "Cron-like tasks at fixed rate/delay"] },
+          { "label": "ForkJoinPool.commonPool()", "columns": ["Work-stealing pool", "Parallel streams, recursive divide-and-conquer"] }
+        ]
+      }
+    },
+    {
+      "title": "Concurrent Collections",
+      "table": {
+        "headers": ["Class", "Use for", "Key feature"],
+        "rows": [
+          { "label": "ConcurrentHashMap", "columns": ["Concurrent map", "Segment-level locking, no full-map lock"] },
+          { "label": "CopyOnWriteArrayList", "columns": ["Read-heavy list", "Snapshot isolation; writes copy entire array"] },
+          { "label": "BlockingQueue (LinkedBlockingQueue, ArrayBlockingQueue)", "columns": ["Producer-consumer", "put() blocks when full, take() blocks when empty"] },
+          { "label": "ConcurrentLinkedQueue", "columns": ["Non-blocking queue", "Lock-free CAS operations"] },
+          { "label": "Semaphore", "columns": ["Limit concurrent access", "permits-based; acquire()/release()"] },
+          { "label": "CountDownLatch", "columns": ["Wait for N events", "One-shot; countdown to zero then release"] },
+          { "label": "CyclicBarrier", "columns": ["Rendezvous point for N threads", "Reusable; all must arrive before proceeding"] },
+          { "label": "Phaser", "columns": ["Dynamic parties, multiple phases", "Generalises CountDownLatch + CyclicBarrier"] }
+        ]
+      }
+    }
+  ]
+}

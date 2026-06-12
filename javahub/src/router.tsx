@@ -12,6 +12,8 @@ import QuizPage from '@/pages/QuizPage'
 import QuizResultsPage from '@/pages/QuizResultsPage'
 import InterviewSimPage from '@/pages/InterviewSimPage'
 import InterviewSimResultsPage from '@/pages/InterviewSimResultsPage'
+import CheatSheetListPage from '@/pages/CheatSheetListPage'
+import CheatSheetPage from '@/pages/CheatSheetPage'
 
 export const router = createBrowserRouter(
   [
@@ -67,6 +69,14 @@ export const router = createBrowserRouter(
         {
           path: 'assessment/results',
           element: <AssessmentResultsPage />,
+        },
+        {
+          path: 'cheatsheets',
+          element: <CheatSheetListPage />,
+        },
+        {
+          path: 'cheatsheets/:id',
+          element: <CheatSheetPage />,
         },
         {
           path: 'interview-sim',

@@ -111,6 +111,30 @@ export interface SimAttempt {
   topicScores: Record<string, { correct: number; total: number }>
 }
 
+export interface CheatSheetRow {
+  label: string
+  columns: string[]
+}
+
+export interface CheatSheetTable {
+  headers: string[]
+  rows: CheatSheetRow[]
+}
+
+export interface CheatSheetSection {
+  title: string
+  content?: string
+  table?: CheatSheetTable
+  codeExample?: string
+}
+
+export interface CheatSheet {
+  id: string
+  title: string
+  topicId: string
+  sections: CheatSheetSection[]
+}
+
 export type UserLevel = 'Junior' | 'Mid' | 'Senior'
 
 export interface UserProfile {

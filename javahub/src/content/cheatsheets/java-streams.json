@@ -1,0 +1,72 @@
+{
+  "id": "java-streams",
+  "title": "Java Streams API",
+  "topicId": "java-core",
+  "sections": [
+    {
+      "title": "Stream Sources",
+      "table": {
+        "headers": ["Method", "Description", "Example"],
+        "rows": [
+          { "label": "Collection.stream()", "columns": ["From any Collection", "list.stream()"] },
+          { "label": "Stream.of()", "columns": ["From varargs", "Stream.of(1, 2, 3)"] },
+          { "label": "Arrays.stream(arr)", "columns": ["From array", "Arrays.stream(new int[]{1,2})"] },
+          { "label": "Stream.generate()", "columns": ["Infinite, from Supplier", "Stream.generate(Math::random).limit(5)"] },
+          { "label": "Stream.iterate()", "columns": ["Infinite, from seed + func", "Stream.iterate(0, n -> n+1).limit(10)"] },
+          { "label": "Files.lines(path)", "columns": ["Lines of a file", "Files.lines(Path.of(\"f.txt\"))"] }
+        ]
+      }
+    },
+    {
+      "title": "Intermediate Operations (lazy)",
+      "table": {
+        "headers": ["Method", "Signature", "Description"],
+        "rows": [
+          { "label": "filter", "columns": ["filter(Predicate<T>)", "Keep elements matching predicate"] },
+          { "label": "map", "columns": ["map(Function<T,R>)", "Transform each element"] },
+          { "label": "flatMap", "columns": ["flatMap(Function<T,Stream<R>>)", "Flatten nested streams"] },
+          { "label": "distinct", "columns": ["distinct()", "Remove duplicates (uses equals)"] },
+          { "label": "sorted", "columns": ["sorted() / sorted(Comparator)", "Sort (natural or custom order)"] },
+          { "label": "limit", "columns": ["limit(long n)", "Truncate to first n elements"] },
+          { "label": "skip", "columns": ["skip(long n)", "Skip first n elements"] },
+          { "label": "peek", "columns": ["peek(Consumer<T>)", "Side-effect without consuming (debug)"] }
+        ]
+      }
+    },
+    {
+      "title": "Terminal Operations (eager — trigger execution)",
+      "table": {
+        "headers": ["Method", "Returns", "Description"],
+        "rows": [
+          { "label": "collect(Collector)", "columns": ["R", "Accumulate into collection, string, etc."] },
+          { "label": "forEach(Consumer)", "columns": ["void", "Consume each element"] },
+          { "label": "count()", "columns": ["long", "Count elements"] },
+          { "label": "findFirst()", "columns": ["Optional<T>", "First element (short-circuits)"] },
+          { "label": "findAny()", "columns": ["Optional<T>", "Any element (better for parallel)"] },
+          { "label": "anyMatch(Predicate)", "columns": ["boolean", "True if any matches (short-circuits)"] },
+          { "label": "allMatch(Predicate)", "columns": ["boolean", "True if all match"] },
+          { "label": "noneMatch(Predicate)", "columns": ["boolean", "True if none match"] },
+          { "label": "reduce(identity, BinaryOp)", "columns": ["T", "Fold to single value"] },
+          { "label": "min/max(Comparator)", "columns": ["Optional<T>", "Min or max element"] },
+          { "label": "toList() (Java 16+)", "columns": ["List<T>", "Collect to unmodifiable list"] }
+        ]
+      }
+    },
+    {
+      "title": "Key Collectors",
+      "table": {
+        "headers": ["Collector", "Description", "Example"],
+        "rows": [
+          { "label": "toList()", "columns": ["Mutable list", "collect(toList())"] },
+          { "label": "toSet()", "columns": ["Mutable set (no duplicates)", "collect(toSet())"] },
+          { "label": "toMap(k, v)", "columns": ["Map from key/value extractors", "collect(toMap(User::id, User::name))"] },
+          { "label": "groupingBy(fn)", "columns": ["Map<K, List<T>> — group by classifier", "collect(groupingBy(User::dept))"] },
+          { "label": "partitioningBy(pred)", "columns": ["Map<Boolean, List<T>>", "collect(partitioningBy(u -> u.age > 18))"] },
+          { "label": "joining(delim)", "columns": ["Concatenate strings", "collect(joining(\", \"))"] },
+          { "label": "counting()", "columns": ["Count per group (use with groupingBy)", "groupingBy(dept, counting())"] },
+          { "label": "summarizingInt(fn)", "columns": ["IntSummaryStatistics (count/sum/avg/min/max)", "summarizingInt(User::age)"] }
+        ]
+      }
+    }
+  ]
+}

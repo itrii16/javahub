@@ -1,0 +1,31 @@
+{
+  "id": "data-structures-complexity",
+  "title": "Data Structures: Big-O Cheat Sheet",
+  "topicId": "data-structures",
+  "sections": [
+    {
+      "title": "Time & Space Complexity",
+      "table": {
+        "headers": ["Structure", "Access", "Search", "Insert", "Delete", "Space", "Java class"],
+        "rows": [
+          { "label": "Array (fixed)", "columns": ["O(1)", "O(n)", "O(n)", "O(n)", "O(n)", "int[], Object[]"] },
+          { "label": "ArrayList", "columns": ["O(1)", "O(n)", "O(1) amort*", "O(n)", "O(n)", "ArrayList<T>"] },
+          { "label": "LinkedList (doubly)", "columns": ["O(n)", "O(n)", "O(1) at ends", "O(1) at ends", "O(n)", "LinkedList<T>"] },
+          { "label": "HashMap", "columns": ["—", "O(1) avg", "O(1) avg", "O(1) avg", "O(n)", "HashMap<K,V>"] },
+          { "label": "TreeMap (Red-Black)", "columns": ["—", "O(log n)", "O(log n)", "O(log n)", "O(n)", "TreeMap<K,V>"] },
+          { "label": "HashSet", "columns": ["—", "O(1) avg", "O(1) avg", "O(1) avg", "O(n)", "HashSet<T>"] },
+          { "label": "TreeSet", "columns": ["—", "O(log n)", "O(log n)", "O(log n)", "O(n)", "TreeSet<T>"] },
+          { "label": "PriorityQueue (min-heap)", "columns": ["peek O(1)", "O(n)", "O(log n)", "O(log n)", "O(n)", "PriorityQueue<T>"] },
+          { "label": "ArrayDeque (stack/queue)", "columns": ["O(1) ends", "O(n)", "O(1) amort*", "O(1) ends", "O(n)", "ArrayDeque<T>"] },
+          { "label": "Binary Search Tree (balanced)", "columns": ["—", "O(log n)", "O(log n)", "O(log n)", "O(n)", "TreeMap / TreeSet"] },
+          { "label": "Trie", "columns": ["—", "O(m)", "O(m)", "O(m)", "O(n·m)", "Custom"] },
+          { "label": "Graph (adj. list)", "columns": ["—", "O(V+E)", "O(V+E)", "O(1)", "O(1)", "O(V+E)", "Map<V, List<V>>"] }
+        ]
+      }
+    },
+    {
+      "title": "Notes",
+      "content": "* amort = amortised (occasional O(n) resize, but O(1) average). m = length of key string. V = vertices, E = edges. ArrayList insert at end is O(1) amortised; insert at middle is O(n) due to shifting. HashMap worst case is O(n) with hash collisions but O(1) with Java 8+ treeified bins."
+    }
+  ]
+}

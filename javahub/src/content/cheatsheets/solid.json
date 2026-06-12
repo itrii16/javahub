@@ -1,0 +1,32 @@
+{
+  "id": "solid",
+  "title": "SOLID Principles",
+  "topicId": "solid",
+  "sections": [
+    {
+      "title": "S — Single Responsibility Principle",
+      "content": "A class should have only one reason to change. One class = one job.",
+      "codeExample": "// ❌ BAD: UserService handles both user logic AND email sending\nclass UserService {\n    void register(User user) { db.save(user); sendWelcomeEmail(user); }\n    void sendWelcomeEmail(User user) { /* email logic */ }\n}\n\n// ✅ GOOD: separate responsibilities\nclass UserService    { void register(User u) { db.save(u); emailService.sendWelcome(u); } }\nclass EmailService   { void sendWelcome(User u) { /* email logic */ } }"
+    },
+    {
+      "title": "O — Open/Closed Principle",
+      "content": "Open for extension, closed for modification. Add behaviour via new classes, not by editing existing ones.",
+      "codeExample": "// ❌ BAD: add new shape = edit existing class\nclass AreaCalc { double area(Object shape) { if (shape instanceof Circle) ... else if ... } }\n\n// ✅ GOOD: new shape = new class\ninterface Shape { double area(); }\nclass Circle implements Shape { double area() { return Math.PI * r * r; } }\nclass Square implements Shape { double area() { return side * side; } }"
+    },
+    {
+      "title": "L — Liskov Substitution Principle",
+      "content": "Subtypes must be substitutable for their base types without breaking behaviour. Don't throw unexpected exceptions or weaken contracts in subclasses.",
+      "codeExample": "// ❌ VIOLATION: Square breaks Rectangle contract\nclass Rectangle { setWidth(w); setHeight(h); }\nclass Square extends Rectangle {\n    void setWidth(int w) { this.w = this.h = w; } // breaks callers expecting independent dimensions\n}\n\n// ✅ FIX: don't extend if behaviour differs\ninterface Shape { double area(); }\nclass Rectangle implements Shape { ... }\nclass Square    implements Shape { ... }"
+    },
+    {
+      "title": "I — Interface Segregation Principle",
+      "content": "Clients should not be forced to depend on interfaces they don't use. Split fat interfaces into smaller, role-specific ones.",
+      "codeExample": "// ❌ BAD: printer forced to implement fax\ninterface Machine { print(); scan(); fax(); }\nclass OldPrinter implements Machine { fax() { throw new UnsupportedOperationException(); } }\n\n// ✅ GOOD: segregated\ninterface Printer { print(); }\ninterface Scanner { scan(); }\nclass OldPrinter implements Printer { print() { ... } }"
+    },
+    {
+      "title": "D — Dependency Inversion Principle",
+      "content": "High-level modules should not depend on low-level modules. Both should depend on abstractions.",
+      "codeExample": "// ❌ BAD: high-level depends on concrete low-level\nclass OrderService { private MySQLRepo repo = new MySQLRepo(); }\n\n// ✅ GOOD: depend on abstraction, inject implementation\nclass OrderService {\n    private final OrderRepository repo; // interface\n    OrderService(OrderRepository repo) { this.repo = repo; } // injected\n}\n// Spring does this automatically with @Autowired / constructor injection"
+    }
+  ]
+}
