@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AppProgress, CardProgress, CardStatus } from '@/types'
+import type { AssessmentSession, AssessmentAnswer } from '@/types/content'
 import { SM2_DEFAULT_STATE } from '@/lib/sm2'
 
 const initialProgress: AppProgress = {
@@ -29,12 +30,59 @@ interface AppStore extends AppProgress {
   resetProgress: () => void
   isGuidedPath: (topicId: string) => boolean
   toggleGuidedPath: (topicId: string) => void
+  // Assessment
+  assessmentHistory: AssessmentSession[]
+  currentAssessment: AssessmentSession | null
+  startAssessment: () => void
+  recordAnswer: (questionId: string, selectedOptionId: string, correct: boolean) => void
+  completeAssessment: (topicScores: Record<string, number>) => void
 }
 
 export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       ...initialProgress,
+      assessmentHistory: [],
+      currentAssessment: null,
+
+      startAssessment: () => {
+        const session: AssessmentSession = {
+          id: crypto.randomUUID(),
+          startedAt: new Date().toISOString(),
+          answers: [],
+          topicScores: {},
+        }
+        set({ currentAssessment: session })
+      },
+
+      recordAnswer: (questionId, selectedOptionId, correct) => {
+        set(state => {
+          if (!state.currentAssessment) return {}
+          const answer: AssessmentAnswer = { questionId, selectedOptionId, correct }
+          return {
+            currentAssessment: {
+              ...state.currentAssessment,
+              answers: [...state.currentAssessment.answers, answer],
+            },
+          }
+        })
+      },
+
+      completeAssessment: (topicScores) => {
+        set(state => {
+          if (!state.currentAssessment) return {}
+          const completed: AssessmentSession = {
+            ...state.currentAssessment,
+            completedAt: new Date().toISOString(),
+            topicScores,
+          }
+          return {
+            currentAssessment: null,
+            assessmentHistory: [...state.assessmentHistory, completed],
+          }
+        })
+      },
+
 
       getCardProgress: (cardId) => {
         return get().cardProgress[cardId] ?? {
@@ -111,6 +159,11 @@ export const useAppStore = create<AppStore>()(
     {
       name: 'javahub-progress',
       version: 1,
+      partialize: (state) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { currentAssessment, ...rest } = state
+        return rest
+      },
     }
   )
 )

@@ -59,7 +59,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 ### F0 — Initial Assessment (Phase 2)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T20 | Assessment question bank: types, 30+ questions, store slice | ⬜ Pending |
+| T20 | Assessment question bank: types, 30+ questions, store slice | ✅ Done |
 | T21 | Assessment quiz UI: adaptive flow, question card, skip option | ⬜ Pending |
 | T22 | Skill radar chart (Recharts), score computation, study plan results page | ⬜ Pending |
 

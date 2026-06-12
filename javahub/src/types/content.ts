@@ -53,6 +53,42 @@ export interface FlatCard extends ContentCard {
 
 export type CardStatus = 'unseen' | 'learning' | 'mastered'
 
+// ─── Assessment ───────────────────────────────────────────────────────────────
+
+export type QuestionFormat = 'multiple-choice' | 'true-false' | 'code-reading'
+
+export interface QuizOption {
+  id: string
+  text: string
+  isCorrect: boolean
+}
+
+export interface QuizQuestion {
+  id: string
+  topicId: string
+  subtopicId: string
+  format: QuestionFormat
+  difficulty: Difficulty
+  question: string
+  options: QuizOption[]
+  explanation: string
+  followUpQuestionId?: string
+}
+
+export interface AssessmentAnswer {
+  questionId: string
+  selectedOptionId: string
+  correct: boolean
+}
+
+export interface AssessmentSession {
+  id: string
+  startedAt: string
+  completedAt?: string
+  answers: AssessmentAnswer[]
+  topicScores: Record<string, number>
+}
+
 export interface SM2State {
   interval: number
   repetition: number
