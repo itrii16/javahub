@@ -103,6 +103,14 @@ export interface QuizAttempt {
   topicId: string
 }
 
+export interface SimAttempt {
+  date: string
+  score: number
+  total: number
+  timeTakenMs: number
+  topicScores: Record<string, { correct: number; total: number }>
+}
+
 export type UserLevel = 'Junior' | 'Mid' | 'Senior'
 
 export interface UserProfile {

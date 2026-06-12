@@ -10,6 +10,8 @@ import AssessmentPage from '@/pages/AssessmentPage'
 import AssessmentResultsPage from '@/pages/AssessmentResultsPage'
 import QuizPage from '@/pages/QuizPage'
 import QuizResultsPage from '@/pages/QuizResultsPage'
+import InterviewSimPage from '@/pages/InterviewSimPage'
+import InterviewSimResultsPage from '@/pages/InterviewSimResultsPage'
 
 export const router = createBrowserRouter(
   [
@@ -65,6 +67,14 @@ export const router = createBrowserRouter(
         {
           path: 'assessment/results',
           element: <AssessmentResultsPage />,
+        },
+        {
+          path: 'interview-sim',
+          element: <InterviewSimPage />,
+        },
+        {
+          path: 'interview-sim/results',
+          element: <InterviewSimResultsPage />,
         },
       ],
     },
