@@ -5,6 +5,30 @@
   "estimatedMinutes": 90,
   "subtopics": [
     {
+      "id": "complexity",
+      "title": "Time & Space Complexity",
+      "cards": [
+        {
+          "id": "ds-big-o-notation",
+          "topicId": "data-structures",
+          "subtopicId": "complexity",
+          "title": "Big O Notation",
+          "difficulty": "Beginner",
+          "explanation": "Big O describes how an algorithm's time or space requirements grow relative to input size n, in the worst case, ignoring constants and lower-order terms. The most common classes from fastest to slowest: O(1) constant, O(log n) logarithmic, O(n) linear, O(n log n) linearithmic, O(n²) quadratic, O(2ⁿ) exponential. When analysing code, nested loops typically multiply — one loop inside another is O(n²). Sequential loops add — two separate loops over n items are still O(n).",
+          "codeExample": "// O(1) — same cost regardless of input size\nint first = list.get(0);\n\n// O(log n) — halves search space each step (binary search, TreeMap)\nint idx = Collections.binarySearch(sortedList, target);\n\n// O(n) — visits each element once\nfor (int x : list) { sum += x; }\n\n// O(n log n) — sort\nCollections.sort(list);\n\n// O(n²) — nested loops over same collection\nfor (int i = 0; i < n; i++)\n    for (int j = 0; j < n; j++)  // inner loop runs n times per outer step\n        process(arr[i], arr[j]);\n\n// O(n) not O(n²) — sequential loops, not nested\nfor (int x : list) { doA(x); }  // O(n)\nfor (int x : list) { doB(x); }  // O(n)\n// total: O(n) + O(n) = O(n)",
+          "whyItMatters": "Big O is the shared vocabulary for discussing algorithm efficiency in interviews and code reviews. It tells you whether an algorithm will scale from 1 000 to 1 000 000 items.",
+          "gotcha": "Big O is worst-case by convention, but average-case is often what matters (HashMap is O(1) average, O(n) worst). Always clarify which case you're discussing.",
+          "complexityTable": [
+            { "operation": "O(1)", "best": "—", "average": "constant", "worst": "array get, HashMap get", "space": "no extra" },
+            { "operation": "O(log n)", "best": "—", "average": "logarithmic", "worst": "binary search, TreeMap", "space": "O(1)" },
+            { "operation": "O(n)", "best": "—", "average": "linear", "worst": "linear scan, ArrayList copy", "space": "O(n)" },
+            { "operation": "O(n log n)", "best": "—", "average": "linearithmic", "worst": "merge sort, Arrays.sort", "space": "O(n)" },
+            { "operation": "O(n²)", "best": "—", "average": "quadratic", "worst": "nested loops, bubble sort", "space": "O(1)" }
+          ]
+        }
+      ]
+    },
+    {
       "id": "hash-tables",
       "title": "Hash Tables",
       "cards": [
@@ -38,6 +62,25 @@
           "whyItMatters": "This contract is one of the most common sources of subtle bugs in Java — objects disappear silently from sets and maps.",
           "gotcha": "Using a mutable field in hashCode() is dangerous — if you mutate the field after inserting the object into a HashSet, you'll never find it again because the hash changed.",
           "jdkClass": "java.util.Objects"
+        },
+        {
+          "id": "ds-map-implementations",
+          "topicId": "data-structures",
+          "subtopicId": "hash-tables",
+          "title": "Map Implementations Compared",
+          "difficulty": "Mid",
+          "explanation": "Java has four commonly used Map implementations with different ordering and thread-safety guarantees. HashMap: no ordering, O(1) average get/put, null keys allowed. LinkedHashMap: preserves insertion order (or access order if configured), slightly more memory. TreeMap: sorted by key natural order or a Comparator, O(log n) operations — useful for range queries. ConcurrentHashMap: thread-safe without locking the whole map (segment-level locking), no null keys or values.",
+          "codeExample": "// HashMap — fastest, no ordering\nMap<String, Integer> hash = new HashMap<>();\nhash.put(\"banana\", 2); hash.put(\"apple\", 1);\n// iteration order not guaranteed\n\n// LinkedHashMap — insertion-ordered\nMap<String, Integer> linked = new LinkedHashMap<>();\nlinked.put(\"banana\", 2); linked.put(\"apple\", 1);\nlinked.forEach((k, v) -> System.out.println(k)); // banana, apple\n\n// TreeMap — sorted by key\nMap<String, Integer> tree = new TreeMap<>();\ntree.put(\"banana\", 2); tree.put(\"apple\", 1);\ntree.forEach((k, v) -> System.out.println(k)); // apple, banana\n// Range queries\ntree.headMap(\"b\").forEach(…);      // keys < \"b\"\ntree.subMap(\"a\", \"c\").forEach(…);  // keys in [a, c)\n\n// ConcurrentHashMap — thread-safe\nMap<String, Integer> concurrent = new ConcurrentHashMap<>();\nconcurrent.put(\"x\", 1);  // safe from multiple threads\n// null keys/values throw NullPointerException",
+          "whyItMatters": "Picking the wrong Map implementation either loses ordering guarantees, introduces race conditions, or adds unnecessary overhead.",
+          "gotcha": "ConcurrentHashMap forbids null keys and values — putting null throws NullPointerException immediately. This differs from HashMap, which allows one null key.",
+          "jdkClass": "java.util.Map",
+          "vsComparison": "HashMap: O(1), unordered. LinkedHashMap: O(1), insertion-ordered. TreeMap: O(log n), sorted. ConcurrentHashMap: O(1), thread-safe, no nulls.",
+          "complexityTable": [
+            { "operation": "HashMap get/put", "best": "O(1)", "average": "O(1)", "worst": "O(n)", "space": "O(n)" },
+            { "operation": "LinkedHashMap get/put", "best": "O(1)", "average": "O(1)", "worst": "O(n)", "space": "O(n)" },
+            { "operation": "TreeMap get/put", "best": "O(log n)", "average": "O(log n)", "worst": "O(log n)", "space": "O(n)" },
+            { "operation": "ConcurrentHashMap get/put", "best": "O(1)", "average": "O(1)", "worst": "O(n)", "space": "O(n)" }
+          ]
         }
       ]
     },
