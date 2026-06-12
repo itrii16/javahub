@@ -1,0 +1,64 @@
+{
+  "id": "security-basics",
+  "title": "Security Basics",
+  "group": "Architecture & Design",
+  "estimatedMinutes": 60,
+  "subtopics": [
+    {
+      "id": "owasp-auth",
+      "title": "OWASP & Authentication",
+      "cards": [
+        {
+          "id": "security-basics-owasp-auth-owasp",
+          "topicId": "security-basics",
+          "subtopicId": "owasp-auth",
+          "title": "OWASP Top 10 for Java Developers",
+          "difficulty": "Mid",
+          "explanation": "The OWASP Top 10 lists the most critical web application security risks. The most relevant to Java backends: A01 Broken Access Control (missing authorization checks), A02 Cryptographic Failures (weak hashing, plaintext secrets), A03 Injection (SQL, LDAP, command injection via unsanitized input), A05 Security Misconfiguration (default credentials, exposed stack traces), A07 Identification & Authentication Failures (broken session management), A09 Logging Failures (not logging security events, logging sensitive data).",
+          "codeExample": "// A03: SQL Injection — NEVER concatenate user input\nString bad = \"SELECT * FROM users WHERE name = '\" + input + \"'\";\n// Input: ' OR '1'='1 → dumps entire table\n\n// Fix: prepared statements\nPreparedStatement ps = conn.prepareStatement(\n    \"SELECT * FROM users WHERE name = ?\");\nps.setString(1, input); // input is parameterized, not concatenated\n\n// JPA is safe IF you use parameters:\n// Safe:\n@Query(\"SELECT u FROM User u WHERE u.email = :email\")\nUser findByEmail(@Param(\"email\") String email);\n\n// UNSAFE (native query with string concat):\n@Query(value = \"SELECT * FROM users WHERE email = '\" + email + \"'\",\n       nativeQuery = true) // DON'T DO THIS\n\n// A01: Broken Access Control — always check ownership\n@GetMapping(\"/orders/{id}\")\npublic Order getOrder(@PathVariable long id, Principal principal) {\n    Order order = orderService.findById(id);\n    if (!order.getOwnerEmail().equals(principal.getName())) {\n        throw new ResponseStatusException(HttpStatus.FORBIDDEN);\n    }\n    return order;\n}",
+          "whyItMatters": "The OWASP Top 10 covers the vulnerabilities responsible for the vast majority of real-world breaches. SQL injection and broken access control are trivial to exploit and trivial to prevent — there is no excuse for them in production code.",
+          "gotcha": "ORMs do not automatically prevent injection. Hibernate's native queries, Spring Data's @Query with string interpolation, and JdbcTemplate with string concatenation are all vulnerable. Always use parameterized queries, regardless of the ORM."
+        },
+        {
+          "id": "security-basics-owasp-auth-jwt-oauth2",
+          "topicId": "security-basics",
+          "subtopicId": "owasp-auth",
+          "title": "JWT & OAuth2 Basics",
+          "difficulty": "Mid",
+          "explanation": "JWT (JSON Web Token) is a compact, self-contained token with three Base64URL-encoded parts: header (algorithm), payload (claims: sub, exp, iat, roles), and signature. The server verifies the signature without a DB lookup — making JWTs stateless. OAuth2 Authorization Code flow: user logs in at an authorization server (Google, Okta), which issues an authorization code; the backend exchanges the code for an access token; the access token is used for API calls. JWTs are commonly used as access tokens.",
+          "codeExample": "// JWT structure: header.payload.signature\n// Header: {\"alg\":\"RS256\",\"typ\":\"JWT\"}\n// Payload: {\"sub\":\"user@example.com\",\"exp\":1735689600,\"roles\":[\"USER\"]}\n// Signature: RSA sign(base64(header) + \".\" + base64(payload), privateKey)\n\n// Spring Security: validate JWT on every request\n@Bean\npublic SecurityFilterChain filterChain(HttpSecurity http) throws Exception {\n    return http\n        .oauth2ResourceServer(oauth2 -> oauth2\n            .jwt(jwt -> jwt.decoder(jwtDecoder()))) // validates signature + expiry\n        .authorizeHttpRequests(auth -> auth\n            .requestMatchers(\"/public/**\").permitAll()\n            .anyRequest().authenticated())\n        .build();\n}\n\n// Decode and read claims\n@GetMapping(\"/profile\")\npublic ProfileDto getProfile(@AuthenticationPrincipal Jwt jwt) {\n    String email = jwt.getSubject();\n    List<String> roles = jwt.getClaimAsStringList(\"roles\");\n    return profileService.findByEmail(email);\n}\n\n// Refresh tokens: short-lived access token (15 min) + long-lived refresh token (7 days)\n// On expiry: client sends refresh token → server issues new access token\n// On logout: add access token to a blocklist (Redis) until expiry",
+          "whyItMatters": "JWT statelessness enables horizontal scaling — any server can validate a JWT without hitting a shared session store. Understanding the security model (signature verification, expiry, claim validation) is essential for implementing auth correctly.",
+          "gotcha": "The 'none' algorithm attack: if the server accepts JWTs with alg=none, an attacker can forge any token by stripping the signature. Always explicitly specify allowed algorithms (RS256, ES256) and reject 'none'. Also: JWTs are encoded, not encrypted — the payload is readable by anyone who intercepts it. Don't put sensitive data in claims."
+        }
+      ]
+    },
+    {
+      "id": "input-secrets",
+      "title": "Input Validation & Secrets Management",
+      "cards": [
+        {
+          "id": "security-basics-input-secrets-validation",
+          "topicId": "security-basics",
+          "subtopicId": "input-secrets",
+          "title": "Input Validation & Output Encoding",
+          "difficulty": "Mid",
+          "explanation": "Validate on the server — client-side validation is UX, not security. Use Bean Validation (@NotNull, @Size, @Pattern, @Email) for structural validation; add business rule checks in the service layer. Output encoding prevents XSS: HTML-encode user-supplied content before rendering it in HTML. Content-Security-Policy (CSP) headers restrict what scripts the browser will execute, providing a second line of defence.",
+          "codeExample": "// Bean Validation on request DTO\npublic class CreateUserRequest {\n    @NotBlank\n    @Size(min = 2, max = 50)\n    private String name;\n\n    @Email\n    @NotBlank\n    private String email;\n\n    @Pattern(regexp = \"^[a-zA-Z0-9]{8,}$\",\n             message = \"Password must be alphanumeric and at least 8 characters\")\n    private String password;\n}\n\n// Spring MVC: @Valid triggers validation, BindingResult captures errors\n@PostMapping(\"/users\")\npublic ResponseEntity<?> create(@Valid @RequestBody CreateUserRequest req,\n                                BindingResult errors) {\n    if (errors.hasErrors()) {\n        return ResponseEntity.badRequest().body(errors.getAllErrors());\n    }\n    return ResponseEntity.status(201).body(userService.create(req));\n}\n\n// Never trust path variables either\n@GetMapping(\"/files/{filename}\")\npublic Resource getFile(@PathVariable String filename) {\n    // BAD: path traversal — filename = \"../../etc/passwd\"\n    // GOOD: validate and sanitize\n    if (filename.contains(\"..\") || filename.contains(\"/\")) {\n        throw new ResponseStatusException(HttpStatus.BAD_REQUEST);\n    }\n    return storageService.load(filename);\n}",
+          "whyItMatters": "Server-side validation is the only validation that cannot be bypassed by an attacker. Path traversal, XSS, and injection all exploit missing input validation. Bean Validation makes the contract explicit and generates standard error responses.",
+          "gotcha": "@Valid only validates the top-level object. Nested objects require @Valid on the field as well: @Valid @NotNull private Address address. Without the nested @Valid, the address fields are not validated even if annotated."
+        },
+        {
+          "id": "security-basics-input-secrets-secrets-management",
+          "topicId": "security-basics",
+          "subtopicId": "input-secrets",
+          "title": "Secrets Management",
+          "difficulty": "Mid",
+          "explanation": "Secrets (API keys, DB passwords, JWT signing keys) must never be hardcoded in source code or committed to version control. The progression: environment variables (basic, works everywhere) → external config (Spring Cloud Config, AWS SSM Parameter Store) → secrets vault (HashiCorp Vault, AWS Secrets Manager — rotation, audit trail, fine-grained access). Rotate secrets regularly and revoke compromised secrets immediately.",
+          "codeExample": "// NEVER: hardcoded secrets\nprivate static final String API_KEY = \"sk-abc123xyz\"; // in source control!\n\n// BASIC: environment variables\n// application.properties:\npayment.api.key=${PAYMENT_API_KEY}  // resolved from env\n\n@Value(\"${payment.api.key}\")\nprivate String paymentApiKey;\n\n// BETTER: Spring Cloud Config / AWS SSM\n// bootstrap.yml:\nspring.cloud.config.uri: http://config-server:8888\n# Config server reads from Git or Vault\n\n// BEST: AWS Secrets Manager (auto-rotation)\n@Bean\npublic AWSSecretsManager secretsManager() {\n    return AWSSecretsManagerClientBuilder.standard().build();\n}\n\npublic String getDbPassword() {\n    GetSecretValueRequest req = new GetSecretValueRequest()\n        .withSecretId(\"prod/myapp/db\");\n    return secretsManager.getSecretValue(req).getSecretString();\n    // Cached by AWS SDK — no latency on every call\n}\n\n// Detecting leaked secrets: git-secrets, truffleHog pre-commit hooks\n// CI: add a secrets scanner (GitHub secret scanning, Snyk)\n// .gitignore: always ignore .env files",
+          "whyItMatters": "Leaked credentials in public repos are exploited within minutes by automated scanners. Hundreds of real breaches have resulted from developers accidentally committing API keys. Vault-based secrets management also provides rotation and audit logs — knowing which service accessed a secret and when.",
+          "gotcha": "Environment variables are accessible to all processes on the host and appear in /proc/[pid]/environ on Linux. They're fine for non-critical config but not ideal for high-value secrets in production. Vault's short-lived dynamic credentials (generated per request, expire in minutes) are more secure for DB passwords."
+        }
+      ]
+    }
+  ]
+}

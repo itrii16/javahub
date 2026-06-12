@@ -1,0 +1,75 @@
+{
+  "id": "api-design",
+  "title": "API Design",
+  "group": "Architecture & Design",
+  "estimatedMinutes": 60,
+  "subtopics": [
+    {
+      "id": "rest-fundamentals",
+      "title": "REST Fundamentals",
+      "cards": [
+        {
+          "id": "api-design-rest-fundamentals-resource-design",
+          "topicId": "api-design",
+          "subtopicId": "rest-fundamentals",
+          "title": "REST Resource Design & HTTP Semantics",
+          "difficulty": "Beginner",
+          "explanation": "REST (Representational State Transfer) is an architectural style where resources are identified by URIs and manipulated via a uniform interface. Resources should be nouns, not verbs — /orders, not /createOrder. HTTP methods carry semantic meaning: GET retrieves (safe, idempotent), POST creates or triggers (neither), PUT replaces a resource (idempotent), PATCH partially updates (idempotent if designed correctly), DELETE removes (idempotent). Status codes communicate outcome: 2xx success, 3xx redirect, 4xx client error, 5xx server error.",
+          "codeExample": "// Resource naming — nouns, hierarchical\nGET    /users              → list users\nGET    /users/42           → get user 42\nPOST   /users              → create a user\nPUT    /users/42           → replace user 42\nPATCH  /users/42           → partial update\nDELETE /users/42           → delete user 42\nGET    /users/42/orders    → orders belonging to user 42\n\n// Status codes\n200 OK             — success with body\n201 Created        — POST success; include Location: /users/42 header\n204 No Content     — success, no body (DELETE, PUT)\n400 Bad Request    — invalid input (include error details in body)\n401 Unauthorized   — not authenticated\n403 Forbidden      — authenticated but not authorised\n404 Not Found      — resource doesn't exist\n409 Conflict       — e.g. duplicate unique field\n422 Unprocessable  — valid JSON but fails business validation\n429 Too Many Req.  — rate limited; include Retry-After header\n500 Internal Error — never leak stack traces in production",
+          "whyItMatters": "Consistent resource naming and correct status codes make APIs predictable. Clients can infer behaviour from conventions without reading docs. 4xx vs 5xx distinctions tell the caller whether retrying makes sense.",
+          "gotcha": "Using POST for everything (RPC-style) is a common REST anti-pattern. It loses HTTP cache semantics, breaks idempotency, and makes API behaviour unpredictable. Reserve POST for non-idempotent creation or actions; use PUT/PATCH for updates."
+        },
+        {
+          "id": "api-design-rest-fundamentals-idempotency",
+          "topicId": "api-design",
+          "subtopicId": "rest-fundamentals",
+          "title": "Idempotency & Safety",
+          "difficulty": "Mid",
+          "explanation": "A safe method has no side effects (GET, HEAD). An idempotent method produces the same server state whether called once or N times (GET, PUT, DELETE — and POST with an idempotency key). Idempotency is critical for retry logic: if a payment POST fails mid-flight, the client shouldn't know whether to retry. The solution is an idempotency key (a UUID sent in a header); the server stores the result and returns it on duplicate requests, preventing double charges.",
+          "codeExample": "// Client sends idempotency key with POST\nPOST /payments\nIdempotency-Key: 550e8400-e29b-41d4-a716-446655440000\nContent-Type: application/json\n\n{ \"amount\": 100, \"currency\": \"USD\", \"cardToken\": \"tok_abc\" }\n\n// Server implementation (Spring)\n@PostMapping(\"/payments\")\npublic ResponseEntity<Payment> createPayment(\n        @RequestHeader(\"Idempotency-Key\") String idempotencyKey,\n        @RequestBody PaymentRequest req) {\n\n    // Check cache first\n    Optional<Payment> existing = idempotencyStore.find(idempotencyKey);\n    if (existing.isPresent()) {\n        return ResponseEntity.ok(existing.get()); // replay cached result\n    }\n\n    Payment payment = paymentService.charge(req);\n    idempotencyStore.save(idempotencyKey, payment, Duration.ofHours(24));\n    return ResponseEntity.status(201).body(payment);\n}",
+          "whyItMatters": "Network failures happen. Without idempotency keys, every retry risks duplicate side effects — double charges, duplicate emails, duplicate records. Idempotency keys are standard practice for any API that performs financial transactions or sends communications.",
+          "gotcha": "PUT is idempotent by definition but requires the client to send the complete resource. This means a client that doesn't know all fields can accidentally erase them. PATCH is safer for partial updates — but PATCH idempotency must be implemented explicitly (e.g. using conditional ETags)."
+        },
+        {
+          "id": "api-design-rest-fundamentals-versioning",
+          "topicId": "api-design",
+          "subtopicId": "rest-fundamentals",
+          "title": "API Versioning Strategies",
+          "difficulty": "Mid",
+          "explanation": "When a breaking change is required, clients must not be forced to upgrade immediately. Three main versioning strategies: URI versioning (/v1/users) is the most explicit and cacheable; header versioning (Accept: application/vnd.myapi.v2+json) keeps URIs clean but is invisible in the browser; query parameter versioning (/users?version=2) is simple but clutters query strings. URI versioning is the most common in practice. Semantic versioning applies to libraries; APIs typically use major-version-only in the URI.",
+          "codeExample": "// URI versioning — most explicit, easiest to test\nGET /v1/users/42    → old response shape\nGET /v2/users/42    → new response shape\n\n// Spring: separate controllers per version\n@RestController\n@RequestMapping(\"/v1/users\")\nclass UserControllerV1 { ... }\n\n@RestController\n@RequestMapping(\"/v2/users\")\nclass UserControllerV2 { ... }\n\n// Header versioning (Accept header)\nGET /users/42\nAccept: application/vnd.mycompany.v2+json\n\n// Spring: content negotiation\n@GetMapping(value=\"/users/{id}\",\n    produces=\"application/vnd.mycompany.v2+json\")\npublic UserV2 getUserV2(@PathVariable long id) { ... }\n\n// Backwards compatibility rules — never break these:\n// ✅ Adding optional fields to response\n// ✅ Adding optional request parameters\n// ✅ Adding new endpoints\n// ❌ Removing or renaming fields\n// ❌ Changing field types\n// ❌ Making optional fields required",
+          "whyItMatters": "APIs are contracts. Breaking changes without versioning force all clients to update simultaneously — impossible in practice. A clear versioning policy lets teams evolve APIs independently while keeping existing integrations working.",
+          "gotcha": "Maintaining multiple API versions in parallel is expensive. Set a deprecation timeline (e.g. v1 sunset in 6 months after v2 launch), communicate it via a Deprecation header and email, and actively track which clients are still on the old version."
+        }
+      ]
+    },
+    {
+      "id": "beyond-rest",
+      "title": "Beyond REST",
+      "cards": [
+        {
+          "id": "api-design-beyond-rest-grpc",
+          "topicId": "api-design",
+          "subtopicId": "beyond-rest",
+          "title": "gRPC Basics",
+          "difficulty": "Mid",
+          "explanation": "gRPC uses Protocol Buffers (a binary serialization format) and HTTP/2. You define services and messages in a .proto file, and the gRPC toolchain generates type-safe client and server stubs in any language. It supports four call types: unary (one request, one response), server streaming, client streaming, and bidirectional streaming. gRPC is preferred over REST for internal service-to-service communication where performance matters and both sides are under your control.",
+          "codeExample": "// 1. Define service in .proto\nsyntax = \"proto3\";\nservice OrderService {\n  rpc GetOrder (GetOrderRequest) returns (Order);\n  rpc StreamOrders (StreamRequest) returns (stream Order); // server streaming\n}\nmessage GetOrderRequest { int64 order_id = 1; }\nmessage Order {\n  int64 id = 1;\n  string status = 2;\n  double total = 3;\n}\n\n// 2. Generated Java server stub — implement the service\npublic class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {\n    @Override\n    public void getOrder(GetOrderRequest req,\n                         StreamObserver<Order> responseObserver) {\n        Order order = orderRepository.findById(req.getOrderId());\n        responseObserver.onNext(order);\n        responseObserver.onCompleted();\n    }\n}\n\n// 3. Generated client usage\nOrderServiceGrpc.OrderServiceBlockingStub stub =\n    OrderServiceGrpc.newBlockingStub(channel);\nOrder order = stub.getOrder(\n    GetOrderRequest.newBuilder().setOrderId(42).build());",
+          "whyItMatters": "gRPC payloads are typically 5–10× smaller than equivalent JSON and 2–3× faster to parse. It enforces a contract via the .proto schema, making breaking changes visible at compile time. Native streaming support makes it ideal for real-time data feeds.",
+          "gotcha": "gRPC is not browser-friendly — browsers can't speak HTTP/2 framing directly. For browser clients, use gRPC-Web (requires a proxy) or REST. Use gRPC for backend-to-backend communication where you control both sides."
+        },
+        {
+          "id": "api-design-beyond-rest-graphql",
+          "topicId": "api-design",
+          "subtopicId": "beyond-rest",
+          "title": "GraphQL Trade-offs",
+          "difficulty": "Mid",
+          "explanation": "GraphQL provides a single endpoint where clients specify exactly which fields they need. This eliminates over-fetching (REST returning 50 fields when 3 are needed) and under-fetching (REST requiring multiple round trips). The schema is strongly typed and introspectable. However, it introduces complexity: N+1 query problems (solved by DataLoader batch loading), difficult HTTP caching (all POSTs), and a steeper learning curve than REST.",
+          "codeExample": "// Client queries only what it needs\nquery {\n  user(id: 42) {\n    name\n    email\n    orders(last: 5) {\n      id\n      total\n    }\n  }\n}\n// Returns exactly: name, email, and last 5 order ids+totals\n// No extra fields, no extra round trips\n\n// N+1 problem: naive resolver fetches orders for each user separately\n// Fix with DataLoader (batches and caches fetches within a request)\n@SchemaMapping\npublic CompletableFuture<List<Order>> orders(\n        User user, DataLoader<Long, List<Order>> ordersLoader) {\n    return ordersLoader.load(user.getId()); // batched — one DB query for all users\n}\n\n// When to use GraphQL vs REST:\n// ✅ GraphQL: mobile clients (bandwidth-sensitive), multiple client types\n//            needing different shapes, rapid frontend iteration\n// ❌ GraphQL: simple CRUD APIs, when HTTP caching is required,\n//            public APIs (REST is more universally understood)",
+          "whyItMatters": "GraphQL shines for product APIs consumed by mobile or web clients that need flexibility over the response shape. Facebook, GitHub, Shopify, and Twitter all use GraphQL for their primary APIs for this reason.",
+          "gotcha": "Without query depth limiting and cost analysis, a malicious or careless client can craft a deeply nested query that exponentially multiplies DB calls. Always implement query complexity limits (e.g. graphql-java's MaxQueryComplexityInstrumentation) in production."
+        }
+      ]
+    }
+  ]
+}

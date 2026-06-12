@@ -1,0 +1,75 @@
+{
+  "id": "distributed-systems",
+  "title": "Distributed Systems",
+  "group": "Architecture & Design",
+  "estimatedMinutes": 75,
+  "subtopics": [
+    {
+      "id": "cap-consistency",
+      "title": "CAP & Consistency",
+      "cards": [
+        {
+          "id": "distributed-systems-cap-consistency-cap",
+          "topicId": "distributed-systems",
+          "subtopicId": "cap-consistency",
+          "title": "CAP Theorem",
+          "difficulty": "Mid",
+          "explanation": "CAP theorem (Brewer, 2000): a distributed system can guarantee at most two of three properties simultaneously. Consistency (C): every read returns the most recent write or an error. Availability (A): every request receives a response (not necessarily the latest data). Partition Tolerance (P): the system continues operating when network partitions (message loss between nodes) occur. Since network partitions are inevitable in real distributed systems, the practical choice is CP (sacrifice availability during a partition) or AP (sacrifice consistency, serve stale data).",
+          "codeExample": "// CP systems — consistency over availability\n// ZooKeeper: refuses requests during partition (leader election)\n// HBase, etcd: rejects writes if quorum unreachable\n// Use for: distributed locks, leader election, config management\n\n// AP systems — availability over consistency\n// Cassandra: always accepts writes, resolves conflicts later\n// DynamoDB (default): eventually consistent reads\n// DNS: serves cached/stale records during partition\n// Use for: user sessions, shopping carts, social feeds\n\n// In Java — handling CP (ZooKeeper-style consistency):\ntry {\n    String lockPath = zk.create(\"/locks/order-42\",\n        new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);\n    // process order — guaranteed only one holder at a time\n} catch (KeeperException.NodeExistsException e) {\n    // someone else holds the lock\n}\n\n// In Java — handling AP (Cassandra eventual consistency):\nSimpleStatement stmt = SimpleStatement\n    .newInstance(\"SELECT * FROM orders WHERE id = ?\", orderId)\n    .setConsistencyLevel(ConsistencyLevel.ONE); // fast, possibly stale\n// vs ConsistencyLevel.QUORUM — slower, more consistent",
+          "whyItMatters": "CAP understanding guides technology selection. Choosing Cassandra for a financial ledger (AP) means accepting duplicate records during partitions. Choosing ZooKeeper for a shopping cart (CP) means cart is unavailable during network hiccups. Match the system's consistency model to the business tolerance for stale or lost data.",
+          "gotcha": "CAP is often misunderstood as a permanent choice. It only applies during a partition — a rare event. During normal operation, both C and A are achievable. The real tradeoff (PACELC) also considers latency vs consistency during normal operation, not just during faults."
+        },
+        {
+          "id": "distributed-systems-cap-consistency-eventual",
+          "topicId": "distributed-systems",
+          "subtopicId": "cap-consistency",
+          "title": "Eventual Consistency & Conflict Resolution",
+          "difficulty": "Mid",
+          "explanation": "Eventual consistency (BASE: Basically Available, Soft state, Eventually consistent) means that, given no new updates, all replicas will converge to the same value — eventually. This is weaker than ACID consistency. Common models: read-your-writes (a user always sees their own writes), monotonic read (subsequent reads never return older data), causal consistency (causally related operations are seen in order). Conflict resolution strategies: last-write-wins (LWW, uses timestamps — simple but can lose data), CRDTs (conflict-free replicated data types — mathematically merge-safe).",
+          "codeExample": "// Last-write-wins (LWW) — simple, can lose concurrent writes\n// Cassandra default: higher timestamp wins\nINSERT INTO user_profile (id, name, updated_at)\nVALUES (42, 'Alice', toTimestamp(now()));\n-- If two nodes wrote concurrently, the later timestamp wins\n-- The earlier write is silently discarded — potential data loss\n\n// Read-your-writes: route user's reads to the node they wrote to\n// Or: use quorum reads after writes\nCassandra: write QUORUM, read QUORUM → strong consistency at cost of latency\n\n// CRDT example: G-Counter (grow-only, merge-safe)\npublic class GCounter {\n    private final Map<String, Long> counts = new HashMap<>();\n    private final String nodeId;\n\n    public void increment() {\n        counts.merge(nodeId, 1L, Long::sum);\n    }\n\n    public long value() { return counts.values().stream().mapToLong(Long::longValue).sum(); }\n\n    // Merge from another replica — always correct, no conflicts\n    public GCounter merge(GCounter other) {\n        GCounter result = new GCounter(nodeId);\n        Set<String> allNodes = new HashSet<>(counts.keySet());\n        allNodes.addAll(other.counts.keySet());\n        allNodes.forEach(n -> result.counts.put(n,\n            Math.max(counts.getOrDefault(n, 0L),\n                     other.counts.getOrDefault(n, 0L))));\n        return result;\n    }\n}",
+          "whyItMatters": "Eventual consistency is the default in most NoSQL databases. Understanding LWW's silent data loss and CRDTs' safety helps you choose the right data structure and write pattern for your use case.",
+          "gotcha": "Shopping cart 'add item' is a classic example where LWW causes data loss: two concurrent adds both see cart=[A], write cart=[A,B] and cart=[A,C] respectively, and LWW picks one — the other item vanishes. The correct model is a set CRDT (add-wins set) where both additions are preserved."
+        },
+        {
+          "id": "distributed-systems-cap-consistency-distributed-transactions",
+          "topicId": "distributed-systems",
+          "subtopicId": "cap-consistency",
+          "title": "Distributed Transactions & the Saga Pattern",
+          "difficulty": "Senior",
+          "explanation": "Two-phase commit (2PC) provides distributed ACID transactions but has a critical weakness: if the coordinator crashes between Phase 1 (prepare) and Phase 2 (commit), all participants are blocked waiting — the database locks are held until the coordinator recovers. The Saga pattern replaces a distributed transaction with a sequence of local transactions, each publishing an event or message. If a step fails, compensating transactions undo the previous steps.",
+          "codeExample": "// 2PC Problem: coordinator crash = all participants blocked\n// Phase 1: coordinator asks all nodes to PREPARE\n// Phase 2: coordinator sends COMMIT — but if it crashes here,\n//   participants hold locks indefinitely (blocking protocol)\n\n// Saga — choreography style (event-driven)\n// Step 1: OrderService creates order → publishes OrderCreated\nordersDB.save(order);  // local transaction\nkafka.send(\"order.created\", event);\n\n// Step 2: PaymentService charges → publishes PaymentCompleted\n// (or publishes PaymentFailed if charge fails)\n@KafkaListener(topics = \"order.created\")\nvoid onOrderCreated(OrderCreatedEvent e) {\n    try {\n        payment.charge(e.amount());\n        kafka.send(\"payment.completed\", new PaymentCompletedEvent(e.orderId()));\n    } catch (PaymentException ex) {\n        kafka.send(\"payment.failed\", new PaymentFailedEvent(e.orderId()));\n    }\n}\n\n// Compensating transaction if payment fails:\n@KafkaListener(topics = \"payment.failed\")\nvoid onPaymentFailed(PaymentFailedEvent e) {\n    orderService.cancelOrder(e.orderId()); // compensating action\n}",
+          "whyItMatters": "2PC is impractical for microservices — it requires a transaction coordinator and locks resources across services. Sagas achieve business-level atomicity (eventual consistency) without distributed locks, making them the standard pattern for multi-service workflows.",
+          "gotcha": "Sagas provide eventual consistency, not atomicity. There is a window where the order is created but payment has not yet been charged. Design your UX and domain model to handle this intermediate state gracefully — use an 'PENDING' status rather than 'CONFIRMED' until the saga completes."
+        }
+      ]
+    },
+    {
+      "id": "resilience",
+      "title": "Resilience Patterns",
+      "cards": [
+        {
+          "id": "distributed-systems-resilience-circuit-breaker",
+          "topicId": "distributed-systems",
+          "subtopicId": "resilience",
+          "title": "Circuit Breaker",
+          "difficulty": "Mid",
+          "explanation": "The Circuit Breaker pattern (Michael Nygard) prevents cascade failures. It wraps calls to an external service and tracks failure rates. States: CLOSED (normal, calls pass through), OPEN (failures exceeded threshold — calls fail immediately with a fallback, not hitting the downstream), HALF-OPEN (after a wait period, a probe request is allowed — if it succeeds, the circuit closes; if it fails, it reopens). Resilience4j is the standard Java library.",
+          "codeExample": "// Resilience4j Circuit Breaker\n@Bean\npublic CircuitBreaker paymentCircuitBreaker(CircuitBreakerRegistry registry) {\n    CircuitBreakerConfig config = CircuitBreakerConfig.custom()\n        .failureRateThreshold(50)          // open at 50% failure rate\n        .waitDurationInOpenState(Duration.ofSeconds(30))\n        .slidingWindowSize(10)             // evaluate last 10 calls\n        .permittedNumberOfCallsInHalfOpenState(3)\n        .build();\n    return registry.circuitBreaker(\"payment\", config);\n}\n\n// Applying the circuit breaker\npublic PaymentResult charge(Order order) {\n    CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker(\"payment\");\n    return cb.executeSupplier(() -> paymentClient.charge(order));\n}\n\n// With fallback\npublic PaymentResult charge(Order order) {\n    return Try.ofSupplier(\n        CircuitBreaker.decorateSupplier(cb, () -> paymentClient.charge(order))\n    ).recover(CallNotPermittedException.class,\n              ex -> PaymentResult.pending(\"Payment service unavailable, will retry\")\n    ).get();\n}\n\n// Spring Boot: @CircuitBreaker annotation\n@CircuitBreaker(name = \"payment\", fallbackMethod = \"paymentFallback\")\npublic PaymentResult charge(Order order) { return paymentClient.charge(order); }\nprivate PaymentResult paymentFallback(Order order, Exception ex) {\n    return PaymentResult.pending(\"Queued for retry\");\n}",
+          "whyItMatters": "Without a circuit breaker, a slow downstream service causes all threads to pile up waiting for it, eventually exhausting the thread pool and taking down the calling service too. Circuit breaker fails fast and frees threads immediately.",
+          "gotcha": "A circuit breaker wrapping a DB connection pool can be dangerous: the CB may open on transient timeouts and then refuse all DB calls during the wait period. Tune the failure threshold and wait duration carefully, and distinguish between retriable errors (timeouts) and non-retriable ones (connection refused)."
+        },
+        {
+          "id": "distributed-systems-resilience-bulkhead-ratelimit",
+          "topicId": "distributed-systems",
+          "subtopicId": "resilience",
+          "title": "Bulkhead & Rate Limiting",
+          "difficulty": "Senior",
+          "explanation": "Bulkhead (from ship design) isolates failures to a compartment. In software: assign separate thread pools to different downstream dependencies. If the payment service hangs and exhausts its thread pool, the inventory service thread pool is unaffected — the rest of the application keeps running. Rate Limiting controls how many requests a client can make in a time window, protecting services from overload. Token bucket is the standard algorithm: a bucket refills at a fixed rate; each request consumes a token; requests when the bucket is empty are rejected.",
+          "codeExample": "// Bulkhead — separate thread pools per dependency\nBulkheadConfig config = BulkheadConfig.custom()\n    .maxConcurrentCalls(10)    // max 10 concurrent calls to payment\n    .maxWaitDuration(Duration.ofMillis(100))\n    .build();\nBulkhead paymentBulkhead = Bulkhead.of(\"payment\", config);\n\n// All payment calls go through this bulkhead\npaymentBulkhead.executeSupplier(() -> paymentClient.charge(order));\n// If 10 threads are already in payment, the 11th waits 100ms then fails\n// The rest of the application (inventory, orders) is unaffected\n\n// Rate Limiter — token bucket\nRateLimiterConfig rlConfig = RateLimiterConfig.custom()\n    .limitForPeriod(100)              // 100 requests\n    .limitRefreshPeriod(Duration.ofSeconds(1)) // per second\n    .timeoutDuration(Duration.ofMillis(25))\n    .build();\nRateLimiter limiter = RateLimiter.of(\"api\", rlConfig);\n\n// Redis-based distributed rate limiter (across multiple instances)\n// Lua script for atomic token bucket check\nString lua = \"\"\"\n    local current = redis.call('INCR', KEYS[1])\n    if current == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end\n    if current > tonumber(ARGV[2]) then return 0 end\n    return 1\n\"\"\";\nBoolean allowed = redis.eval(lua, 1, \"rate:user:42\", \"60\", \"100\");",
+          "whyItMatters": "Bulkheads prevent one slow dependency from taking down an entire service. Rate limiting protects services from traffic spikes and ensures fair resource allocation between clients — critical for public APIs where one misbehaving client could degrade the service for all others.",
+          "gotcha": "In-process rate limiters (Resilience4j RateLimiter) only work per JVM instance. If you run 10 pods, each pod allows 100 req/s, giving 1000 req/s total. For true distributed rate limiting, use Redis (or a dedicated rate-limit service) as the shared counter — the Lua script approach ensures the increment and check are atomic."
+        }
+      ]
+    }
+  ]
+}

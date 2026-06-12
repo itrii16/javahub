@@ -1,0 +1,75 @@
+{
+  "id": "database-fundamentals",
+  "title": "Database Fundamentals",
+  "group": "Architecture & Design",
+  "estimatedMinutes": 60,
+  "subtopics": [
+    {
+      "id": "acid-indexing",
+      "title": "ACID & Indexing",
+      "cards": [
+        {
+          "id": "database-fundamentals-acid-indexing-acid",
+          "topicId": "database-fundamentals",
+          "subtopicId": "acid-indexing",
+          "title": "ACID Properties & Isolation Levels",
+          "difficulty": "Beginner",
+          "explanation": "ACID guarantees the correctness of database transactions. Atomicity: all operations in a transaction succeed or all are rolled back — no partial updates. Consistency: a transaction brings the DB from one valid state to another — constraints are never violated mid-transaction. Isolation: concurrent transactions appear to run serially — one transaction's partial state is invisible to others (degree depends on isolation level). Durability: committed transactions survive crashes — data is flushed to disk before the commit returns.",
+          "codeExample": "-- Isolation levels (least to most strict)\n-- READ UNCOMMITTED: can read dirty (uncommitted) data — almost never used\n-- READ COMMITTED: only reads committed data (default in Postgres, Oracle)\n--   ↳ anomaly: non-repeatable read (same row, different value on re-read)\n-- REPEATABLE READ: same row returns same value within a transaction (default MySQL)\n--   ↳ anomaly: phantom read (new rows appear in range query)\n-- SERIALIZABLE: transactions appear fully serial — no anomalies, lowest throughput\n\n-- Spring: set isolation per transaction\n@Transactional(isolation = Isolation.REPEATABLE_READ)\npublic void transferFunds(long from, long to, BigDecimal amount) {\n    Account sender = repo.findByIdForUpdate(from); // SELECT FOR UPDATE\n    Account receiver = repo.findById(to);\n    sender.debit(amount);\n    receiver.credit(amount);\n    repo.save(sender);\n    repo.save(receiver);\n} // commit — both debits and credits visible atomically",
+          "whyItMatters": "Choosing the wrong isolation level causes subtle data corruption bugs that only appear under concurrent load. Read Committed (Postgres default) is right for most applications. Serializable is needed for financial double-entry bookkeeping or anything where phantom reads would corrupt business logic.",
+          "gotcha": "Higher isolation levels reduce concurrency — more rows are locked for longer. SERIALIZABLE in a high-throughput system can cause deadlocks and rollbacks. Profile your specific workload before choosing an isolation level above the default."
+        },
+        {
+          "id": "database-fundamentals-acid-indexing-indexes",
+          "topicId": "database-fundamentals",
+          "subtopicId": "acid-indexing",
+          "title": "Indexing Strategies",
+          "difficulty": "Mid",
+          "explanation": "A B-tree index stores sorted key values in a tree structure, enabling O(log n) lookup by key. Composite index column order matters: an index on (last_name, first_name) supports queries on last_name alone but not first_name alone — put the most selective column first, then columns used in equality filters before range filters. A covering index includes all columns a query needs, avoiding a table lookup entirely. Low-cardinality columns (boolean, status with 3 values) are poor index candidates — the optimizer will often prefer a full scan.",
+          "codeExample": "-- Single column index\nCREATE INDEX idx_orders_customer ON orders(customer_id);\n\n-- Composite index: supports WHERE customer_id = ? AND status = ?\n-- Also supports: WHERE customer_id = ? (left-prefix)\n-- Does NOT support: WHERE status = ? alone\nCREATE INDEX idx_orders_customer_status ON orders(customer_id, status);\n\n-- Covering index: includes all columns the query needs\n-- Query: SELECT id, total FROM orders WHERE customer_id = 42\nCREATE INDEX idx_orders_covering ON orders(customer_id) INCLUDE (id, total);\n-- No table heap lookup needed — all data in the index\n\n-- EXPLAIN ANALYZE (Postgres)\nEXPLAIN ANALYZE\n  SELECT * FROM orders WHERE customer_id = 42 AND status = 'PENDING';\n-- Look for: Index Scan vs Seq Scan, actual rows vs estimated rows\n-- High discrepancy → stale statistics → run ANALYZE\n\n-- Index on expression\nCREATE INDEX idx_users_email_lower ON users(LOWER(email));\n-- Supports: WHERE LOWER(email) = 'user@example.com'",
+          "whyItMatters": "A missing index on a foreign key is one of the most common production performance issues — a 200ms query becomes 20s under load. EXPLAIN ANALYZE is the first tool to reach for when a query is slow.",
+          "gotcha": "Every index slows down INSERT/UPDATE/DELETE because the index must be maintained. A table with 15 indexes on a high-write path can be slower than one with 3 well-chosen indexes. Audit indexes regularly and drop unused ones."
+        },
+        {
+          "id": "database-fundamentals-acid-indexing-n-plus-one",
+          "topicId": "database-fundamentals",
+          "subtopicId": "acid-indexing",
+          "title": "N+1 Query Problem",
+          "difficulty": "Mid",
+          "explanation": "The N+1 problem occurs when loading a parent entity and then issuing a separate query per child entity. Loading 100 orders and then fetching each order's items with a lazy-load triggers 101 queries (1 for orders + 100 for items). With Hibernate/JPA, this is caused by @OneToMany or @ManyToOne with LAZY fetch strategy (the default). Detection: enable SQL logging or use p6spy. Fix: JOIN FETCH, @EntityGraph, or batch fetching.",
+          "codeExample": "// N+1 problem — 1 + N queries\nList<Order> orders = orderRepo.findAll(); // 1 query\nfor (Order order : orders) {\n    order.getItems().size(); // triggers 1 query per order — N queries!\n}\n\n// Fix 1: JOIN FETCH in JPQL\n@Query(\"SELECT o FROM Order o JOIN FETCH o.items WHERE o.customerId = :id\")\nList<Order> findWithItems(@Param(\"id\") long customerId);\n// Issues 1 SQL JOIN — returns all data in one round trip\n\n// Fix 2: @EntityGraph — declarative fetch\n@EntityGraph(attributePaths = {\"items\", \"items.product\"})\nList<Order> findByCustomerId(long customerId);\n\n// Fix 3: Batch fetching (Hibernate) — fetches items for N orders in batches\n@OneToMany(fetch = FetchType.LAZY)\n@BatchSize(size = 30) // fetches items for 30 orders per query\nprivate List<Item> items;\n\n// Detecting N+1 in tests\nspring.jpa.show-sql=true\nspring.jpa.properties.hibernate.generate_statistics=true\n// Or: Hibernate Statistics bean → count queries per request",
+          "whyItMatters": "N+1 is the most common JPA performance bug. It's invisible in development (small datasets) but catastrophic in production. A page showing 50 orders might issue 51 queries — and under load, this saturates the DB connection pool.",
+          "gotcha": "JOIN FETCH with pagination (@Query + Pageable) causes a Hibernate warning: 'HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory'. Hibernate fetches ALL rows and paginates in memory — defeating the purpose. Fix: use a two-query approach (IDs with pagination, then fetch by IDs) or @EntityGraph with separate count query."
+        }
+      ]
+    },
+    {
+      "id": "hibernate-pitfalls",
+      "title": "Hibernate Pitfalls",
+      "cards": [
+        {
+          "id": "database-fundamentals-hibernate-pitfalls-session",
+          "topicId": "database-fundamentals",
+          "subtopicId": "hibernate-pitfalls",
+          "title": "Session Scope & LazyInitializationException",
+          "difficulty": "Mid",
+          "explanation": "Hibernate's Session (EntityManager) is the unit of work — it tracks changes, manages the first-level cache, and must be open when lazy-loaded associations are accessed. LazyInitializationException (LIE) means a lazily-loaded collection was accessed after the Session was closed. The Open-Session-in-View (OSIV) pattern keeps the Session open for the entire HTTP request — it masks LIE but causes subtle N+1 issues and holds DB connections during view rendering.",
+          "codeExample": "// LazyInitializationException scenario\n@Transactional\npublic Order findOrder(long id) {\n    return orderRepo.findById(id).orElseThrow();\n} // transaction closes here — Session closes\n\n// In controller (outside @Transactional):\nOrder order = service.findOrder(42);\norder.getItems().size(); // LIE! Session already closed\n\n// Fix 1: load within transaction (preferred)\n@Transactional\npublic OrderDto findOrderWithItems(long id) {\n    Order order = orderRepo.findById(id).orElseThrow();\n    Hibernate.initialize(order.getItems()); // explicit init within session\n    return OrderDto.from(order); // map to DTO — no lazy proxies escape\n}\n\n// Fix 2: disable OSIV (recommended for production)\n# application.properties\nspring.jpa.open-in-view=false\n# Forces you to handle lazy loading properly\n# Prevents accidental lazy loads during JSON serialization\n\n// Best practice: map to DTOs inside @Transactional\n// Never let JPA entities escape the service layer",
+          "whyItMatters": "OSIV is enabled by default in Spring Boot and is the silent cause of many production N+1 issues. Disabling it (spring.jpa.open-in-view=false) forces developers to think about what data they actually need and load it explicitly.",
+          "gotcha": "JSON serialization (Jackson) of a JPA entity will trigger lazy loading if the serializer accesses an uninitialized collection — causing LIE when OSIV is off, or silent N+1 when OSIV is on. Always map entities to DTOs before returning from the service layer."
+        },
+        {
+          "id": "database-fundamentals-hibernate-pitfalls-locking",
+          "topicId": "database-fundamentals",
+          "subtopicId": "hibernate-pitfalls",
+          "title": "Optimistic vs Pessimistic Locking",
+          "difficulty": "Senior",
+          "explanation": "Optimistic locking assumes conflicts are rare: each entity has a @Version field (integer or timestamp). On update, Hibernate checks that the version hasn't changed since the entity was loaded — if it has, another transaction modified it and an OptimisticLockException is thrown (the caller retries). Pessimistic locking acquires a DB-level row lock (SELECT FOR UPDATE) immediately — guarantees no concurrent modification but reduces throughput and risks deadlocks.",
+          "codeExample": "// Optimistic locking — @Version field\n@Entity\npublic class Product {\n    @Id long id;\n    int stock;\n    @Version int version; // Hibernate manages this automatically\n}\n\n// Transaction 1 reads: version=5, stock=10\n// Transaction 2 reads: version=5, stock=10\n// Transaction 1 updates stock to 9 → version becomes 6, committed\n// Transaction 2 tries to update → Hibernate detects version mismatch\n//   → throws OptimisticLockException\n\n// Retry on OptimisticLockException\n@Retryable(value = OptimisticLockException.class, maxAttempts = 3)\n@Transactional\npublic void decrementStock(long productId) {\n    Product p = productRepo.findById(productId).orElseThrow();\n    p.setStock(p.getStock() - 1);\n    productRepo.save(p); // Hibernate auto-checks version\n}\n\n// Pessimistic locking — acquires DB row lock immediately\n@Transactional\npublic void bookSeat(long seatId) {\n    Seat seat = seatRepo.findById(seatId,\n        LockModeType.PESSIMISTIC_WRITE).orElseThrow(); // SELECT FOR UPDATE\n    if (!seat.isAvailable()) throw new SeatTakenException();\n    seat.reserve();\n} // row lock released on commit",
+          "whyItMatters": "Optimistic locking is right for most business operations where conflicts are rare (typical CRUD). Pessimistic locking is right where conflicts are frequent and the cost of retrying is high — seat booking, inventory reservation for a flash sale.",
+          "gotcha": "OptimisticLockException is thrown when the transaction tries to commit, not when the entity is loaded. If your @Transactional method catches Exception broadly and swallows it, optimistic lock failures will be silently ignored, causing lost updates."
+        }
+      ]
+    }
+  ]
+}
