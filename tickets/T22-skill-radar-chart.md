@@ -98,9 +98,11 @@ Persist `userProfile` to localStorage.
 
 ---
 
-## Re-assessment
+## Re-assessment (F0.4)
 - `AssessmentResultsPage` shows a "Retake assessment" button (links back to `/assessment`)
-- Dashboard (T15 / T33) will show this same results link — handled in T33
+- Dashboard (T29) shows a retake link when `assessmentDate` is >30 days ago
+- **Before/after overlay**: when a re-assessment is completed and a previous `topicScores` exists in the store, show a second radar line on the chart (dashed, `gray-500`) representing the old scores alongside the new scores (`indigo-400`). Add a legend: "Previous" (gray dashed) / "Current" (indigo). Store the previous scores as `userProfile.previousTopicScores` before overwriting.
+- **Per-topic re-test prompt**: after a user completes a Study Mode session (T13 `SessionSummaryPage`), show a chip: "Re-test your {topic} knowledge? → Take quiz" linking to `/topic/:topicId/quiz`
 
 ---
 

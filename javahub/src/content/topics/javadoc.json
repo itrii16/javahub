@@ -1,0 +1,75 @@
+{
+  "id": "javadoc",
+  "title": "Javadoc & Code Documentation",
+  "group": "Java Core",
+  "estimatedMinutes": 30,
+  "subtopics": [
+    {
+      "id": "writing-javadoc",
+      "title": "Writing Effective Javadoc",
+      "cards": [
+        {
+          "id": "javadoc-writing-javadoc-anatomy",
+          "topicId": "javadoc",
+          "subtopicId": "writing-javadoc",
+          "title": "Javadoc Anatomy",
+          "difficulty": "Beginner",
+          "explanation": "Javadoc comments start with /** and end with */. The first sentence (up to the first period) is used as the summary in generated index pages — make it count. Standard block tags: @param describes a parameter, @return describes the return value, @throws documents a checked exception (use @exception as synonym), @since records the version added, @deprecated marks obsolete APIs. Class-level javadoc describes the contract; method-level javadoc describes inputs, outputs, and exceptions.",
+          "codeExample": "/**\n * Transfers the specified amount from one account to another.\n *\n * <p>Both accounts must be active. The transfer is atomic — either\n * both balances update or neither does.\n *\n * @param from   the account to debit; must not be null\n * @param to     the account to credit; must not be null\n * @param amount the amount to transfer; must be positive\n * @return the updated balance of the {@code from} account\n * @throws InsufficientFundsException if {@code from} has insufficient balance\n * @throws IllegalArgumentException   if {@code amount} is not positive\n * @since 2.0\n */\npublic Money transfer(Account from, Account to, Money amount) { ... }\n\n/**\n * @deprecated Use {@link #transfer(Account, Account, Money)} instead.\n * This method will be removed in version 3.0.\n */\n@Deprecated(since = \"2.0\", forRemoval = true)\npublic void oldTransfer(Account from, Account to, int cents) { ... }",
+          "whyItMatters": "Javadoc is the API contract. Well-written Javadoc lets callers use your code correctly without reading the implementation. It's especially critical for library code used by other teams.",
+          "gotcha": "The first sentence must end with a period followed by a space, or the tool treats the entire first paragraph as the summary — resulting in a very long, unusable summary line in the generated HTML."
+        },
+        {
+          "id": "javadoc-writing-javadoc-best-practices",
+          "topicId": "javadoc",
+          "subtopicId": "writing-javadoc",
+          "title": "Javadoc Best Practices",
+          "difficulty": "Mid",
+          "explanation": "Document the contract, not the implementation. Describe what a method guarantees (preconditions, postconditions, side effects), not how it achieves it. Skip Javadoc on private methods — it's not published and wastes maintenance. Skip Javadoc on obvious getters/setters (getName() needs no explanation). Use @code for code literals in running text and @link to reference related types. package-info.java is the right place for package-level documentation.",
+          "codeExample": "// BAD: documents the implementation, not the contract\n/**\n * Iterates over the list and uses a StringBuilder to\n * concatenate elements with commas between them.\n */\npublic String join(List<String> items) { ... }\n\n// GOOD: documents the contract\n/**\n * Returns a comma-separated string of all items.\n * Returns an empty string if {@code items} is empty.\n *\n * @param items the items to join; must not be null\n */\npublic String join(List<String> items) { ... }\n\n// Using @code vs @link\n/**\n * Returns {@code null} if no match is found.  // @code for literals\n * For batch use, see {@link #findAll(Predicate)}. // @link for types/methods\n */\n\n// package-info.java\n/**\n * Payment processing domain — handles authorization,\n * capture, and refund workflows.\n *\n * <p>All monetary values use {@link java.util.Currency} and\n * {@link java.math.BigDecimal} to avoid floating-point errors.\n */\npackage com.example.payments;",
+          "whyItMatters": "Documenting the implementation couples the docs to the code, requiring updates every time the implementation changes. Documenting the contract is stable — it only changes when the observable behaviour changes.",
+          "gotcha": "@param and @return on a method that overrides a supertype method are optional — if omitted, the tool inherits them from the supertype. This is correct behaviour; don't copy-paste parent docs into every override."
+        },
+        {
+          "id": "javadoc-writing-javadoc-generating",
+          "topicId": "javadoc",
+          "subtopicId": "writing-javadoc",
+          "title": "Generating & Publishing Javadoc",
+          "difficulty": "Beginner",
+          "explanation": "The javadoc CLI tool processes source files and generates HTML documentation. In Maven projects, the maven-javadoc-plugin wraps it. Use -link to cross-link to JDK docs so that types like List and Optional become clickable. The output directory (typically target/site/apidocs) contains an index.html entry point. Modern hosting: push to GitHub Pages or publish as a Maven site.",
+          "codeExample": "# CLI usage\njavadoc -d docs/ -sourcepath src/main/java \\\n    -subpackages com.example \\\n    -link https://docs.oracle.com/en/java/javase/21/docs/api/\n\n# Maven plugin — add to pom.xml\n<plugin>\n  <groupId>org.apache.maven.plugins</groupId>\n  <artifactId>maven-javadoc-plugin</artifactId>\n  <version>3.6.0</version>\n  <configuration>\n    <links>\n      <link>https://docs.oracle.com/en/java/javase/21/docs/api/</link>\n    </links>\n    <failOnWarnings>true</failOnWarnings>\n  </configuration>\n</plugin>\n\n# Generate: mvn javadoc:javadoc\n# Output:   target/site/apidocs/index.html\n\n# Fail build on missing Javadoc (enforce docs for public APIs)\nmvn javadoc:javadoc -Dmaven.javadoc.failOnError=true",
+          "whyItMatters": "Automating Javadoc generation in CI ensures docs stay in sync with code. Enabling failOnWarnings or failOnError catches missing @param/@return tags before they reach the main branch.",
+          "gotcha": "-link generates <a> tags in the HTML that link to external JDK docs. Without it, types like String appear as plain text. The URL must match exactly — use the Java 21 URL for Java 21 projects."
+        }
+      ]
+    },
+    {
+      "id": "api-contracts",
+      "title": "Documenting API Contracts",
+      "cards": [
+        {
+          "id": "javadoc-api-contracts-preconditions",
+          "topicId": "javadoc",
+          "subtopicId": "api-contracts",
+          "title": "Preconditions, Postconditions & Null Safety",
+          "difficulty": "Mid",
+          "explanation": "A method's Javadoc should explicitly state its preconditions (what callers must ensure), postconditions (what the method guarantees on return), and invariants (properties that always hold). For null safety, annotate parameters and return types with @NonNull / @Nullable (from JetBrains, Checker Framework, or Jakarta Validation). Document thread-safety in the class-level comment — is the class thread-safe, conditionally thread-safe, or not thread-safe?",
+          "codeExample": "import org.jetbrains.annotations.NotNull;\nimport org.jetbrains.annotations.Nullable;\n\n/**\n * Repository for user data access.\n *\n * <p><b>Thread safety:</b> This class is thread-safe. All methods\n * may be called concurrently from multiple threads.\n */\npublic class UserRepository {\n\n    /**\n     * Finds a user by their unique ID.\n     *\n     * @param userId the user ID; must be positive\n     * @return the user, or {@code null} if not found\n     * @throws IllegalArgumentException if {@code userId} is not positive\n     */\n    @Nullable\n    public User findById(@NotNull Long userId) {\n        if (userId <= 0) throw new IllegalArgumentException(\"userId must be positive\");\n        return db.findById(userId).orElse(null);\n    }\n\n    /**\n     * Saves a user. If the user has an ID, it is updated; otherwise inserted.\n     *\n     * @param user the user to save; must not be null, name must not be blank\n     * @return the saved user with its generated ID populated\n     */\n    @NotNull\n    public User save(@NotNull User user) { ... }\n}",
+          "whyItMatters": "@Nullable/@NonNull annotations are machine-readable contracts. IDEs (IntelliJ, Eclipse) and static analysis tools (NullAway, Error Prone) use them to find NullPointerExceptions at compile time.",
+          "gotcha": "There is no single standard null-annotation library in Java. JetBrains, Checker Framework, Jakarta, SpotBugs, and Spring each have their own. Pick one per project and stick to it — mixing them confuses IDEs and static analysis tools."
+        },
+        {
+          "id": "javadoc-api-contracts-deprecation",
+          "topicId": "javadoc",
+          "subtopicId": "api-contracts",
+          "title": "Deprecation Workflow",
+          "difficulty": "Mid",
+          "explanation": "Deprecating an API requires both the @Deprecated annotation (read by the compiler and IDE to show warnings) and the @deprecated Javadoc tag (read by humans to understand what to use instead). Java 9 added since and forRemoval fields to @Deprecated. Use forRemoval=true only when you intend to actually remove it in a future major version — this produces a more severe compiler warning than regular deprecation.",
+          "codeExample": "// Correct deprecation: both annotation AND javadoc tag\n/**\n * Parses a date from a string.\n *\n * @deprecated Use {@link DateTimeFormatter#parse(CharSequence)} instead.\n *             This method uses the old {@link java.util.Date} API\n *             and does not handle time zones correctly.\n *             Will be removed in version 4.0.\n */\n@Deprecated(since = \"3.0\", forRemoval = true)\npublic Date parseDate(String s) { ... }\n\n// Missing annotation — IDE won't show warning on call sites:\n/**\n * @deprecated Use newMethod() instead.  // useless without @Deprecated\n */\npublic void badDeprecation() { ... }\n\n// Missing javadoc tag — caller doesn't know what to use:\n@Deprecated  // compiler warns, but no guidance on migration\npublic void noGuidance() { ... }",
+          "whyItMatters": "Both pieces are required: the annotation triggers IDE and compiler warnings at call sites, and the tag provides the migration path. Omitting either produces an incomplete deprecation that frustrates users of your API.",
+          "gotcha": "Deprecated code must still compile and work correctly until it is actually removed. Deprecating a method that still has internal callers (which won't produce warnings because deprecation warnings are suppressed in the same compilation unit) is a common mistake — use @SuppressWarnings(\"deprecation\") sparingly."
+        }
+      ]
+    }
+  ]
+}

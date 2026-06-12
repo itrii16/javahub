@@ -68,6 +68,11 @@ Algorithms: TimSort, Quicksort, Mergesort, Heapsort, Insertion Sort, Counting So
 GC table: GC | Java version | Pause type | Best for | Key flags.
 Entries: Serial, Parallel, G1, ZGC, Shenandoah.
 
+### `system-design-glossary.json`
+System design vocabulary glossary. Two sections:
+1. **Core terms** (prose definitions, one per entry): latency, throughput, availability, consistency, partition, idempotency, sharding, replication, CAP, BASE, ACID, eventual consistency, fan-out, backpressure, SLA, SLO, RPO, RTO.
+2. **Pattern quick-reference table**: Pattern | Problem it solves | Java / ecosystem example. Rows: Circuit Breaker, Saga, CQRS, Event Sourcing, Outbox, Sidecar, Bulkhead, Rate Limiter, Cache-Aside, Write-Through.
+
 ---
 
 ## Routes

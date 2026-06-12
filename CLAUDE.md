@@ -51,7 +51,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 ### Content — Missing Topics (all 21 topics)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T16 | Seed Java Core remaining topics (Collections, Concurrency, JVM, Generics, Javadoc) | ⬜ Pending |
+| T16 | Seed Java Core remaining topics (Collections, Concurrency, JVM, Generics, Javadoc) | ✅ Done |
 | T17 | Seed Engineering Principles (SOLID, Clean Code, Patterns, Refactoring, Testing) | ⬜ Pending |
 | T18 | Seed Architecture & Design (API, Arch Patterns, DB, Distributed, Security, Logging) | ⬜ Pending |
 | T19 | Seed Interview remaining (Algorithms in Java, System Design patterns) | ⬜ Pending |
@@ -116,7 +116,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 - Guided path mode (Senior cards locked until Beginner/Mid mastered)
 - Basic homepage with streak, last visited, due cards today
 
-**Content gap**: Only 3 of 21 topics seeded. T16–T19 fill the remaining 18 topics.
+**Content gap**: 8 of 21 topics seeded (T16 added Collections, Concurrency, JVM Internals, Generics, Javadoc). T17–T19 fill the remaining 13 topics.
 
 **Not yet built** (T16–T32):
 - 18 missing topic JSON files (T16–T19)
