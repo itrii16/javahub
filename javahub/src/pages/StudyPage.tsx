@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { topicMap } from '@/content'
 import { useAppStore } from '@/store/useAppStore'
 import { reviewCard, getDueCardIds } from '@/lib/sm2'
 import FlashCard from '@/components/study/FlashCard'
 import RatingBar from '@/components/study/RatingBar'
+import TeachItBackCard from '@/components/study/TeachItBackCard'
 import type { ContentCard } from '@/types'
 
 export default function StudyPage() {
   const { topicId } = useParams<{ topicId: string }>()
   const topic = topicId ? topicMap[topicId] : null
+  const navigate = useNavigate()
 
   const getCardProgress = useAppStore(s => s.getCardProgress)
   const setCardProgress = useAppStore(s => s.setCardProgress)
@@ -21,7 +23,8 @@ export default function StudyPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
   const [sessionResults, setSessionResults] = useState<{ cardId: string; quality: number }[]>([])
-  const [isDone, setIsDone] = useState(false)
+  const [mode, setMode] = useState<'flashcard' | 'teach-it-back'>('flashcard')
+  const [teachInput, setTeachInput] = useState('')
 
   useEffect(() => {
     if (!topic) return
@@ -44,19 +47,29 @@ export default function StudyPage() {
     const currentProgress = getCardProgress(currentCard.id)
     const { sm2, status } = reviewCard(currentProgress.sm2, quality)
     setCardProgress(currentCard.id, { sm2, status })
-    setSessionResults(prev => [...prev, { cardId: currentCard.id, quality }])
+    const updatedResults = [...sessionResults, { cardId: currentCard.id, quality }]
+    setSessionResults(updatedResults)
 
     if (quality < 3) {
       setQueue(prev => [...prev, currentCard])
     }
 
     if (currentIndex >= queue.length - 1) {
-      setIsDone(true)
+      sessionStorage.setItem(
+        'lastSessionResults',
+        JSON.stringify({
+          topicId,
+          results: updatedResults,
+          completedAt: new Date().toISOString(),
+        })
+      )
+      navigate(`/topic/${topicId}/study/summary`)
     } else {
       setCurrentIndex(i => i + 1)
       setIsFlipped(false)
+      setTeachInput('')
     }
-  }, [currentCard, currentIndex, queue.length])
+  }, [currentCard, currentIndex, queue.length, sessionResults, topicId, navigate])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -88,19 +101,30 @@ export default function StudyPage() {
     )
   }
 
-  if (isDone) {
-    return <SessionDone results={sessionResults} topicId={topicId!} />
-  }
-
   return (
     <div className="max-w-xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <Link to={`/topic/${topicId}`} className="text-sm text-gray-400 hover:text-gray-200">
           ← {topic.title}
         </Link>
-        <span className="text-sm text-gray-500">
-          {currentIndex + 1} / {queue.length}
-        </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Mode:</span>
+            <button
+              onClick={() => setMode(m => m === 'flashcard' ? 'teach-it-back' : 'flashcard')}
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                mode === 'teach-it-back'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              {mode === 'teach-it-back' ? '📝 Teach it back' : '🃏 Flashcard'}
+            </button>
+          </div>
+          <span className="text-sm text-gray-500">
+            {currentIndex + 1} / {queue.length}
+          </span>
+        </div>
       </div>
 
       <div className="h-1 bg-gray-800 rounded-full mb-6 overflow-hidden">
@@ -111,11 +135,21 @@ export default function StudyPage() {
       </div>
 
       {currentCard && (
-        <FlashCard
-          card={currentCard}
-          isFlipped={isFlipped}
-          onFlip={() => setIsFlipped(f => !f)}
-        />
+        mode === 'teach-it-back' ? (
+          <TeachItBackCard
+            card={currentCard}
+            isFlipped={isFlipped}
+            onFlip={() => setIsFlipped(f => !f)}
+            userInput={teachInput}
+            onInputChange={setTeachInput}
+          />
+        ) : (
+          <FlashCard
+            card={currentCard}
+            isFlipped={isFlipped}
+            onFlip={() => setIsFlipped(f => !f)}
+          />
+        )
       )}
 
       {isFlipped && (
@@ -129,48 +163,6 @@ export default function StudyPage() {
           Press <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-400">Space</kbd> or click the card to reveal
         </p>
       )}
-    </div>
-  )
-}
-
-function SessionDone({
-  results,
-  topicId,
-}: {
-  results: { cardId: string; quality: number }[]
-  topicId: string
-}) {
-  const got = results.filter(r => r.quality >= 3).length
-  const review = results.filter(r => r.quality < 3).length
-
-  return (
-    <div className="max-w-lg mx-auto text-center py-16">
-      <p className="text-5xl mb-4">✅</p>
-      <h2 className="text-xl font-semibold text-gray-100 mb-2">Session complete</h2>
-      <div className="flex justify-center gap-8 my-6 text-sm">
-        <div>
-          <p className="text-2xl font-bold text-green-400">{got}</p>
-          <p className="text-gray-400">Got it</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-yellow-400">{review}</p>
-          <p className="text-gray-400">To review</p>
-        </div>
-      </div>
-      <div className="flex gap-3 justify-center">
-        <Link
-          to={`/topic/${topicId}/study`}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors"
-        >
-          Study again
-        </Link>
-        <Link
-          to={`/topic/${topicId}`}
-          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm rounded-lg transition-colors"
-        >
-          Back to topic
-        </Link>
-      </div>
     </div>
   )
 }
