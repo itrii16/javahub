@@ -13,6 +13,7 @@ const initialProgress: AppProgress = {
     count: 0,
   },
   sessionCount: 0,
+  guidedPathTopics: [],
 }
 
 interface AppStore extends AppProgress {
@@ -26,6 +27,8 @@ interface AppStore extends AppProgress {
   touchStreak: () => void
   incrementSessionCount: () => void
   resetProgress: () => void
+  isGuidedPath: (topicId: string) => boolean
+  toggleGuidedPath: (topicId: string) => void
 }
 
 export const useAppStore = create<AppStore>()(
@@ -94,6 +97,16 @@ export const useAppStore = create<AppStore>()(
       },
 
       resetProgress: () => set(initialProgress),
+
+      isGuidedPath: (topicId) => get().guidedPathTopics.includes(topicId),
+
+      toggleGuidedPath: (topicId) => {
+        set(state => ({
+          guidedPathTopics: state.guidedPathTopics.includes(topicId)
+            ? state.guidedPathTopics.filter(id => id !== topicId)
+            : [...state.guidedPathTopics, topicId],
+        }))
+      },
     }),
     {
       name: 'javahub-progress',
