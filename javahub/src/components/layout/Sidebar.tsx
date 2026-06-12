@@ -107,6 +107,27 @@ export default function Sidebar({ onNavigate }: Props) {
           </div>
         )
       })}
+
+      {/* Interview Prep section */}
+      <div className="mb-4 mt-2">
+        <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-widest text-gray-500">
+          Interview Prep
+        </p>
+        <Link
+          to="/interview-sim"
+          onClick={onNavigate}
+          className="block px-4 py-2.5 text-sm text-gray-300 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+        >
+          Interview Simulation
+        </Link>
+        <Link
+          to="/assessment"
+          onClick={onNavigate}
+          className="block px-4 py-2.5 text-sm text-gray-300 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+        >
+          Skill Assessment
+        </Link>
+      </div>
     </nav>
   )
 }

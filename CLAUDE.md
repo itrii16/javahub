@@ -67,7 +67,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 | Ticket | Description | Status |
 |--------|-------------|--------|
 | T23 | Per-topic quiz UI: question flow, immediate feedback, results page | ✅ Done |
-| T24 | Interview simulation mode: timed 30Q quiz, results, PDF print report | ⬜ Pending |
+| T24 | Interview simulation mode: timed 30Q quiz, results, PDF print report | ✅ Done |
 
 ### F4 — Cheat Sheets (Phase 3)
 | Ticket | Description | Status |
