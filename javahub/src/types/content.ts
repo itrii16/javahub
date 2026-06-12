@@ -96,6 +96,13 @@ export interface SM2State {
   dueDate: string
 }
 
+export interface QuizAttempt {
+  date: string
+  score: number
+  total: number
+  topicId: string
+}
+
 export type UserLevel = 'Junior' | 'Mid' | 'Senior'
 
 export interface UserProfile {
