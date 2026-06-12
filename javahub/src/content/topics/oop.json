@@ -46,6 +46,34 @@
           "codeExample": "// Interface: defines what, not how\ninterface Printable {\n    void print();                          // must implement\n    default void printTwice() {            // optional to override\n        print(); print();\n    }\n}\n\n// Abstract class: partial implementation\nabstract class Vehicle {\n    private final String plate;\n    Vehicle(String plate) { this.plate = plate; }  // shared constructor\n    abstract int maxSpeed();               // subclasses define this\n    String info() { return plate + \" @ \" + maxSpeed() + \"km/h\"; } // shared\n}\n\n// A class can do both\nclass Car extends Vehicle implements Printable {\n    Car(String p) { super(p); }\n    @Override public int maxSpeed() { return 200; }\n    @Override public void print() { System.out.println(info()); }\n}",
           "whyItMatters": "Choosing correctly keeps inheritance hierarchies shallow and avoids fragile base class problems.",
           "gotcha": "Extending an abstract class consumes your one inheritance slot. Prefer interfaces + composition unless you genuinely need shared state or a constructor."
+        },
+        {
+          "id": "oop-composition-over-inheritance",
+          "topicId": "oop",
+          "subtopicId": "polymorphism",
+          "title": "Composition over Inheritance",
+          "difficulty": "Senior",
+          "explanation": "Inheritance creates a tight compile-time coupling between parent and child — changes to the parent silently break subclasses (the fragile base class problem). Composition delegates behaviour to collaborator objects held as fields, so you can swap implementations at runtime and avoid deep hierarchies. 'Favour composition over inheritance' is item 18 of Effective Java.",
+          "codeExample": "// Inheritance approach — fragile\nclass InstrumentedHashSet<E> extends HashSet<E> {\n    private int addCount = 0;\n    @Override public boolean add(E e) { addCount++; return super.add(e); }\n    @Override public boolean addAll(Collection<? extends E> c) {\n        addCount += c.size();\n        return super.addAll(c);  // BUG: addAll calls add() internally, double-counts!\n    }\n}\n\n// Composition approach — robust\nclass InstrumentedSet<E> implements Set<E> {\n    private final Set<E> delegate;  // composed, not extended\n    private int addCount = 0;\n\n    InstrumentedSet(Set<E> s) { this.delegate = s; }\n\n    @Override public boolean add(E e) { addCount++; return delegate.add(e); }\n    @Override public boolean addAll(Collection<? extends E> c) {\n        addCount += c.size();\n        return delegate.addAll(c);  // delegate handles internals — no double count\n    }\n    public int getAddCount() { return addCount; }\n    // ... forward remaining Set methods to delegate\n}",
+          "whyItMatters": "Deep inheritance hierarchies become unmaintainable and produce subtle bugs when parent internals change. Composition keeps classes independent and testable.",
+          "gotcha": "The wrapper/decorator pattern (composition) requires forwarding all interface methods — verbose but worth it. Lombok's @Delegate or IDE generation can reduce the boilerplate."
+        }
+      ]
+    },
+    {
+      "id": "solid",
+      "title": "SOLID Principles",
+      "cards": [
+        {
+          "id": "oop-solid-srp-ocp",
+          "topicId": "oop",
+          "subtopicId": "solid",
+          "title": "Single Responsibility & Open/Closed",
+          "difficulty": "Senior",
+          "explanation": "SRP: a class should have only one reason to change — it owns one cohesive responsibility. OCP: classes should be open for extension but closed for modification — add behaviour by adding code, not changing existing code. These two principles work together: SRP keeps classes focused so OCP extensions don't cascade unintended side effects.",
+          "codeExample": "// Violates SRP — one class does persistence AND email\nclass OrderService {\n    void placeOrder(Order o) {\n        database.save(o);                  // persistence concern\n        emailClient.send(o.getEmail(), …); // notification concern\n    }\n}\n\n// SRP: separate responsibilities\nclass OrderRepository { void save(Order o) { … } }\nclass OrderNotifier  { void notify(Order o) { … } }\nclass OrderService {\n    OrderService(OrderRepository repo, OrderNotifier notifier) { … }\n    void placeOrder(Order o) { repo.save(o); notifier.notify(o); }\n}\n\n// OCP: extend via polymorphism, don't modify OrderService\ninterface OrderNotifier { void notify(Order o); }\nclass EmailNotifier implements OrderNotifier { … }\nclass SmsNotifier   implements OrderNotifier { … }  // added without touching OrderService",
+          "whyItMatters": "SRP makes classes easier to test and change in isolation. OCP prevents 'ripple effect' — a change in one feature breaking unrelated features.",
+          "gotcha": "Taken too far, SRP leads to micro-classes with a single method, making the codebase hard to navigate. Aim for cohesion, not atomisation."
         }
       ]
     }

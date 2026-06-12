@@ -62,6 +62,50 @@
             { "operation": "Insert at index", "best": "O(n)", "average": "O(n)", "worst": "O(n)", "space": "O(1)" },
             { "operation": "toString()", "best": "O(n)", "average": "O(n)", "worst": "O(n)", "space": "O(n)" }
           ]
+        },
+        {
+          "id": "ds-array-vs-arraylist",
+          "topicId": "data-structures",
+          "subtopicId": "arrays-strings",
+          "title": "Array vs ArrayList",
+          "difficulty": "Beginner",
+          "explanation": "A Java array is a fixed-size, contiguous block of memory that can hold primitives or objects. ArrayList is a resizable array backed by an Object[] that doubles in capacity when full (amortised O(1) add). Use a raw array when size is known and fixed, or when you need primitive performance (no boxing). Use ArrayList when you need dynamic resizing, the Collections API, or interoperability with streams.",
+          "codeExample": "// Array — fixed size, primitives allowed\nint[] scores = new int[5];  // no boxing overhead\nscores[0] = 42;\n// scores[5] = 1;  // ArrayIndexOutOfBoundsException at runtime\n\n// ArrayList — dynamic, objects only\nList<Integer> list = new ArrayList<>();  // Integer, not int (boxed)\nlist.add(42);  // auto-boxes int → Integer\nlist.add(99);\nlist.remove(Integer.valueOf(42));  // removes by value, not index\n\n// Convert between them\nint[] arr = {1, 2, 3};\nList<Integer> fromArr = new ArrayList<>(Arrays.asList(1, 2, 3));\nint[] backToArr = list.stream().mapToInt(Integer::intValue).toArray();",
+          "whyItMatters": "Knowing when to use each avoids unnecessary boxing overhead and unexpected resizing costs in hot paths.",
+          "gotcha": "Arrays.asList() returns a fixed-size list backed by the array — you can set elements but not add or remove. Wrap it in new ArrayList<>() if you need a truly mutable list.",
+          "jdkClass": "java.util.ArrayList",
+          "vsComparison": "Array: fixed size, primitives, fastest random access. ArrayList: dynamic size, objects only, slightly more memory due to boxing and Object[] overhead.",
+          "complexityTable": [
+            { "operation": "Random access", "best": "O(1)", "average": "O(1)", "worst": "O(1)", "space": "O(1)" },
+            { "operation": "Add at end", "best": "O(1)*", "average": "O(1)*", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Insert at index", "best": "O(n)", "average": "O(n)", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Remove at index", "best": "O(n)", "average": "O(n)", "worst": "O(n)", "space": "O(1)" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "linked-lists",
+      "title": "Linked Lists & Queues",
+      "cards": [
+        {
+          "id": "ds-linkedlist-vs-arraylist",
+          "topicId": "data-structures",
+          "subtopicId": "linked-lists",
+          "title": "LinkedList vs ArrayList",
+          "difficulty": "Mid",
+          "explanation": "LinkedList is a doubly-linked list where each node holds a value and references to the previous and next nodes. It has O(1) insert/remove at head or tail but O(n) random access. ArrayList has O(1) random access but O(n) insert/remove in the middle. In practice, ArrayList outperforms LinkedList for almost all workloads due to CPU cache locality — sequential traversal of an array is much faster than following heap pointers.",
+          "codeExample": "// LinkedList as a Deque (double-ended queue) — its best use case\nDeque<String> deque = new LinkedList<>();\ndeque.addFirst(\"a\");   // O(1)\ndeque.addLast(\"b\");    // O(1)\ndeque.addFirst(\"z\");   // O(1)\nSystem.out.println(deque);  // [z, a, b]\ndeque.pollFirst();          // removes and returns \"z\"\n\n// For queue/stack use cases, prefer ArrayDeque\nDeque<String> fast = new ArrayDeque<>(); // better cache performance than LinkedList\nfast.push(\"x\");\nfast.pop();\n\n// LinkedList get(index) is O(n) — avoid in loops\nLinkedList<Integer> list = new LinkedList<>(List.of(1,2,3,4,5));\nint mid = list.get(2);  // traverses from head — slow for large lists",
+          "whyItMatters": "Choosing LinkedList expecting faster inserts often makes things slower due to GC pressure and cache misses. Benchmark before assuming.",
+          "gotcha": "Java's LinkedList implements both List and Deque. When you need a queue or stack, use ArrayDeque instead — it's faster and uses less memory.",
+          "jdkClass": "java.util.LinkedList",
+          "vsComparison": "ArrayList: fast random access, cache-friendly, slow mid-list inserts. LinkedList: fast head/tail ops, poor cache locality, high memory overhead (two pointers per node).",
+          "complexityTable": [
+            { "operation": "Get by index", "best": "O(1)", "average": "O(n)", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Add at head/tail", "best": "O(1)", "average": "O(1)", "worst": "O(1)", "space": "O(1)" },
+            { "operation": "Add at index", "best": "O(1)", "average": "O(n)", "worst": "O(n)", "space": "O(1)" },
+            { "operation": "Remove head/tail", "best": "O(1)", "average": "O(1)", "worst": "O(1)", "space": "O(1)" }
+          ]
         }
       ]
     }
