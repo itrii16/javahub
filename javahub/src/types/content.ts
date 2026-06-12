@@ -95,3 +95,12 @@ export interface SM2State {
   efactor: number
   dueDate: string
 }
+
+export type UserLevel = 'Junior' | 'Mid' | 'Senior'
+
+export interface UserProfile {
+  level: UserLevel | null
+  assessmentDate: string | null
+  topicScores: Record<string, number>
+  groupScores: Record<string, number>
+}
