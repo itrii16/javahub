@@ -1,0 +1,491 @@
+[
+  {
+    "id": "q-java-core-lambda-001",
+    "topicId": "java-core",
+    "subtopicId": "lambdas",
+    "format": "multiple-choice",
+    "difficulty": "Beginner",
+    "question": "Which of the following is a valid functional interface?",
+    "options": [
+      { "id": "a", "text": "Runnable", "isCorrect": true },
+      { "id": "b", "text": "Cloneable", "isCorrect": false },
+      { "id": "c", "text": "Serializable", "isCorrect": false },
+      { "id": "d", "text": "Iterable", "isCorrect": false }
+    ],
+    "explanation": "Runnable has exactly one abstract method (run()), making it a functional interface. Cloneable and Serializable are marker interfaces with no abstract methods. Iterable has iterator() but it's not annotated @FunctionalInterface and is not intended for lambda use.",
+    "followUpQuestionId": "q-java-core-lambda-002"
+  },
+  {
+    "id": "q-java-core-lambda-002",
+    "topicId": "java-core",
+    "subtopicId": "lambdas",
+    "format": "true-false",
+    "difficulty": "Mid",
+    "question": "A lambda expression can capture and modify a local variable from the enclosing scope.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": false },
+      { "id": "b", "text": "False", "isCorrect": true }
+    ],
+    "explanation": "Lambdas can only capture 'effectively final' local variables — those that are never reassigned after initialisation. Attempting to modify a captured variable inside a lambda produces a compile error: 'Variable used in lambda expression should be final or effectively final'."
+  },
+  {
+    "id": "q-java-core-streams-001",
+    "topicId": "java-core",
+    "subtopicId": "streams",
+    "format": "code-reading",
+    "difficulty": "Mid",
+    "question": "What does the following code print?\n```java\nList<Integer> nums = List.of(1, 2, 3, 4, 5);\nint result = nums.stream()\n    .filter(n -> n % 2 == 0)\n    .mapToInt(Integer::intValue)\n    .sum();\nSystem.out.println(result);\n```",
+    "options": [
+      { "id": "a", "text": "6", "isCorrect": true },
+      { "id": "b", "text": "15", "isCorrect": false },
+      { "id": "c", "text": "2", "isCorrect": false },
+      { "id": "d", "text": "9", "isCorrect": false }
+    ],
+    "explanation": "filter(n -> n % 2 == 0) keeps even numbers: [2, 4]. mapToInt converts to IntStream. sum() returns 2 + 4 = 6."
+  },
+  {
+    "id": "q-collections-map-001",
+    "topicId": "collections",
+    "subtopicId": "map-internals",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "What happens if you use a mutable object as a HashMap key and then mutate it after insertion?",
+    "options": [
+      { "id": "a", "text": "The entry becomes unreachable because the hashCode changes", "isCorrect": true },
+      { "id": "b", "text": "HashMap automatically rehashes the entry", "isCorrect": false },
+      { "id": "c", "text": "A ConcurrentModificationException is thrown", "isCorrect": false },
+      { "id": "d", "text": "Nothing — HashMap ignores hashCode after insertion", "isCorrect": false }
+    ],
+    "explanation": "HashMap computes the bucket index from hashCode() at insertion time. If the key is mutated and its hashCode changes, the entry is stored in the old bucket. Subsequent get() or containsKey() calls hash to a different bucket and return null/false — the entry is effectively lost.",
+    "followUpQuestionId": "q-collections-map-002"
+  },
+  {
+    "id": "q-collections-map-002",
+    "topicId": "collections",
+    "subtopicId": "map-internals",
+    "format": "true-false",
+    "difficulty": "Mid",
+    "question": "ConcurrentHashMap allows null keys.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": false },
+      { "id": "b", "text": "False", "isCorrect": true }
+    ],
+    "explanation": "ConcurrentHashMap explicitly disallows null keys and null values. This is intentional: null would be ambiguous — you couldn't distinguish between 'key not present' and 'key mapped to null'. HashMap does allow null keys (at most one), but ConcurrentHashMap does not."
+  },
+  {
+    "id": "q-concurrency-threads-001",
+    "topicId": "concurrency",
+    "subtopicId": "threads-locks",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Which statement about volatile in Java is correct?",
+    "options": [
+      { "id": "a", "text": "volatile guarantees visibility but NOT atomicity for compound operations", "isCorrect": true },
+      { "id": "b", "text": "volatile guarantees both visibility and atomicity", "isCorrect": false },
+      { "id": "c", "text": "volatile prevents reordering but has no effect on visibility", "isCorrect": false },
+      { "id": "d", "text": "volatile is equivalent to synchronized", "isCorrect": false }
+    ],
+    "explanation": "volatile ensures every write is flushed to main memory and every read fetches from main memory (visibility). But volatile int count++ is still a read-modify-write race condition — the three operations are not atomic. Use AtomicInteger for atomic compound operations.",
+    "followUpQuestionId": "q-concurrency-threads-002"
+  },
+  {
+    "id": "q-concurrency-threads-002",
+    "topicId": "concurrency",
+    "subtopicId": "async-modern",
+    "format": "multiple-choice",
+    "difficulty": "Senior",
+    "question": "What is the main advantage of Virtual Threads (Java 21) over platform threads?",
+    "options": [
+      { "id": "a", "text": "Virtual threads are faster for CPU-bound computations", "isCorrect": false },
+      { "id": "b", "text": "Virtual threads scale to millions because blocking unmounts them from the carrier thread", "isCorrect": true },
+      { "id": "c", "text": "Virtual threads eliminate the need for synchronization", "isCorrect": false },
+      { "id": "d", "text": "Virtual threads are automatically parallelised across CPU cores", "isCorrect": false }
+    ],
+    "explanation": "Virtual threads are lightweight — when they block on I/O, they are unmounted from the OS carrier thread, freeing it for other virtual threads. This allows millions of concurrent virtual threads without OS thread limits. They do NOT help CPU-bound work and still require synchronization."
+  },
+  {
+    "id": "q-jvm-memory-001",
+    "topicId": "jvm-internals",
+    "subtopicId": "memory-gc",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Which GC collector is best suited for a latency-sensitive application requiring sub-millisecond pauses?",
+    "options": [
+      { "id": "a", "text": "Serial GC", "isCorrect": false },
+      { "id": "b", "text": "Parallel GC", "isCorrect": false },
+      { "id": "c", "text": "G1 GC", "isCorrect": false },
+      { "id": "d", "text": "ZGC", "isCorrect": true }
+    ],
+    "explanation": "ZGC (Java 15+, production-ready in Java 21) performs almost all GC work concurrently, delivering sub-millisecond pauses regardless of heap size. G1 targets 200ms pauses. Parallel GC is throughput-optimized with stop-the-world pauses. Serial GC is for single-core environments."
+  },
+  {
+    "id": "q-generics-wildcards-001",
+    "topicId": "generics",
+    "subtopicId": "bounds-wildcards",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Using PECS, what is the correct signature for a method that copies elements from a source list to a destination list?",
+    "options": [
+      { "id": "a", "text": "void copy(List<T> dst, List<T> src)", "isCorrect": false },
+      { "id": "b", "text": "void copy(List<? super T> dst, List<? extends T> src)", "isCorrect": true },
+      { "id": "c", "text": "void copy(List<? extends T> dst, List<? super T> src)", "isCorrect": false },
+      { "id": "d", "text": "void copy(List<?> dst, List<?> src)", "isCorrect": false }
+    ],
+    "explanation": "PECS: Producer Extends, Consumer Super. src produces T values (read from) → ? extends T. dst consumes T values (written to) → ? super T. This matches Collections.copy(List<? super T> dest, List<? extends T> src) in the JDK."
+  },
+  {
+    "id": "q-javadoc-001",
+    "topicId": "javadoc",
+    "subtopicId": "writing-javadoc",
+    "format": "true-false",
+    "difficulty": "Beginner",
+    "question": "The @deprecated Javadoc tag alone (without the @Deprecated annotation) is sufficient to trigger IDE warnings at call sites.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": false },
+      { "id": "b", "text": "False", "isCorrect": true }
+    ],
+    "explanation": "Both are required. The @Deprecated annotation (capital D) is read by the compiler and IDE to show strikethrough and warnings at call sites. The @deprecated Javadoc tag (lowercase d) is read by humans and provides migration guidance. Omitting either produces an incomplete deprecation."
+  },
+  {
+    "id": "q-oop-principles-001",
+    "topicId": "oop",
+    "subtopicId": "inheritance",
+    "format": "multiple-choice",
+    "difficulty": "Beginner",
+    "question": "Which OOP principle is violated when a subclass throws UnsupportedOperationException for a method defined in the parent class?",
+    "options": [
+      { "id": "a", "text": "Encapsulation", "isCorrect": false },
+      { "id": "b", "text": "Liskov Substitution Principle", "isCorrect": true },
+      { "id": "c", "text": "Open/Closed Principle", "isCorrect": false },
+      { "id": "d", "text": "Interface Segregation Principle", "isCorrect": false }
+    ],
+    "explanation": "LSP requires that subtypes honour the supertype's contract. If a parent class promises a method works, a subclass that throws UnsupportedOperationException breaks that contract — callers can no longer safely substitute the subtype for the parent."
+  },
+  {
+    "id": "q-solid-srp-001",
+    "topicId": "solid",
+    "subtopicId": "srp-ocp-lsp",
+    "format": "true-false",
+    "difficulty": "Beginner",
+    "question": "The Single Responsibility Principle means a class should have only one method.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": false },
+      { "id": "b", "text": "False", "isCorrect": true }
+    ],
+    "explanation": "SRP means a class should have only one reason to change — one cohesive responsibility. A class can have many methods as long as they all serve the same responsibility. Over-splitting into single-method classes creates fragmentation, not clarity.",
+    "followUpQuestionId": "q-solid-dip-001"
+  },
+  {
+    "id": "q-solid-dip-001",
+    "topicId": "solid",
+    "subtopicId": "isp-dip",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Which technique most directly implements the Dependency Inversion Principle?",
+    "options": [
+      { "id": "a", "text": "Using static factory methods", "isCorrect": false },
+      { "id": "b", "text": "Constructor injection with interface parameters", "isCorrect": true },
+      { "id": "c", "text": "Extending abstract classes", "isCorrect": false },
+      { "id": "d", "text": "Using the Singleton pattern", "isCorrect": false }
+    ],
+    "explanation": "DIP says high-level modules should depend on abstractions, not concretions. Constructor injection with an interface parameter (e.g. OrderService(OrderRepository repo)) means the caller decides which implementation to inject. The high-level class never imports the concrete implementation."
+  },
+  {
+    "id": "q-clean-code-naming-001",
+    "topicId": "clean-code",
+    "subtopicId": "naming-functions",
+    "format": "multiple-choice",
+    "difficulty": "Beginner",
+    "question": "Which of the following best follows Clean Code naming conventions?",
+    "options": [
+      { "id": "a", "text": "void proc(List<int[]> l, boolean flg)", "isCorrect": false },
+      { "id": "b", "text": "void calculateMonthlyRevenue(List<Order> orders, boolean includeRefunds)", "isCorrect": true },
+      { "id": "c", "text": "void doIt(List<int[]> data)", "isCorrect": false },
+      { "id": "d", "text": "void process(Object o)", "isCorrect": false }
+    ],
+    "explanation": "Clean Code: use intention-revealing names that describe what, why, and how. 'calculateMonthlyRevenue' names the purpose, 'orders' names the domain concept, 'includeRefunds' names the flag's meaning. The others use cryptic abbreviations, generic names, or type-less parameters."
+  },
+  {
+    "id": "q-design-patterns-strategy-001",
+    "topicId": "design-patterns",
+    "subtopicId": "structural-behavioral",
+    "format": "multiple-choice",
+    "difficulty": "Beginner",
+    "question": "Which design pattern does Java's Comparator interface implement?",
+    "options": [
+      { "id": "a", "text": "Observer", "isCorrect": false },
+      { "id": "b", "text": "Decorator", "isCorrect": false },
+      { "id": "c", "text": "Strategy", "isCorrect": true },
+      { "id": "d", "text": "Factory Method", "isCorrect": false }
+    ],
+    "explanation": "Comparator is a classic Strategy: it encapsulates a comparison algorithm and makes it interchangeable. You pass different Comparator implementations to Collections.sort() to change the sorting strategy without modifying the sort method itself."
+  },
+  {
+    "id": "q-refactoring-smells-001",
+    "topicId": "refactoring",
+    "subtopicId": "code-smells",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "A method in OrderService calls five getter methods on a Customer object to perform its logic. Which code smell does this describe?",
+    "options": [
+      { "id": "a", "text": "Shotgun Surgery", "isCorrect": false },
+      { "id": "b", "text": "Primitive Obsession", "isCorrect": false },
+      { "id": "c", "text": "Feature Envy", "isCorrect": true },
+      { "id": "d", "text": "Large Class", "isCorrect": false }
+    ],
+    "explanation": "Feature Envy: a method is more interested in another class's data than its own. Calling five getters on Customer to do logic in OrderService suggests that logic belongs in Customer (or a dedicated service). The fix is Move Method."
+  },
+  {
+    "id": "q-testing-junit-001",
+    "topicId": "testing",
+    "subtopicId": "unit-testing",
+    "format": "multiple-choice",
+    "difficulty": "Beginner",
+    "question": "What is the correct JUnit 5 way to assert that a method throws an exception?",
+    "options": [
+      { "id": "a", "text": "@Test(expected = IllegalArgumentException.class)", "isCorrect": false },
+      { "id": "b", "text": "assertThrows(IllegalArgumentException.class, () -> method())", "isCorrect": true },
+      { "id": "c", "text": "try { method(); fail(); } catch (Exception e) {}", "isCorrect": false },
+      { "id": "d", "text": "@ExpectedException(IllegalArgumentException.class)", "isCorrect": false }
+    ],
+    "explanation": "assertThrows() is the JUnit 5 idiomatic way. It returns the exception, allowing you to also assert its message. The @Test(expected) form is JUnit 4. The try/catch form works but assertThrows is cleaner and more precise about which line throws."
+  },
+  {
+    "id": "q-api-design-rest-001",
+    "topicId": "api-design",
+    "subtopicId": "rest-fundamentals",
+    "format": "multiple-choice",
+    "difficulty": "Beginner",
+    "question": "A client creates a payment and the response is lost due to a network timeout. The client retries. Which HTTP status code should the server return for the duplicate request if it uses idempotency keys?",
+    "options": [
+      { "id": "a", "text": "409 Conflict", "isCorrect": false },
+      { "id": "b", "text": "200 OK with the original result", "isCorrect": true },
+      { "id": "c", "text": "201 Created again", "isCorrect": false },
+      { "id": "d", "text": "422 Unprocessable Entity", "isCorrect": false }
+    ],
+    "explanation": "With idempotency keys, the server stores the result of the first successful request. On a duplicate request with the same key, it returns 200 OK with the cached original result — not 201 (that would imply a new resource was created) and not 409 (no conflict occurred, just a replay)."
+  },
+  {
+    "id": "q-arch-patterns-hex-001",
+    "topicId": "architecture-patterns",
+    "subtopicId": "layered-hex",
+    "format": "true-false",
+    "difficulty": "Mid",
+    "question": "In Hexagonal Architecture, the application core should import Spring annotations like @Service and @Repository.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": false },
+      { "id": "b", "text": "False", "isCorrect": true }
+    ],
+    "explanation": "The core purpose of Hexagonal Architecture is that the application core has no dependency on frameworks, infrastructure, or delivery mechanisms. Spring annotations belong in the adapter layer (controllers, JPA repositories). The core contains pure Java business logic with no framework imports.",
+    "followUpQuestionId": "q-arch-patterns-micro-001"
+  },
+  {
+    "id": "q-arch-patterns-micro-001",
+    "topicId": "architecture-patterns",
+    "subtopicId": "distributed",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "What is a 'distributed monolith'?",
+    "options": [
+      { "id": "a", "text": "A monolith deployed across multiple data centres", "isCorrect": false },
+      { "id": "b", "text": "Services that are deployed separately but tightly coupled through shared DB or synchronous chains", "isCorrect": true },
+      { "id": "c", "text": "A microservices architecture with more than 100 services", "isCorrect": false },
+      { "id": "d", "text": "A monolith that uses distributed caching", "isCorrect": false }
+    ],
+    "explanation": "A distributed monolith combines the worst of both worlds: the operational complexity of microservices with the tight coupling of a monolith. Services share a database, call each other synchronously in long chains, or cannot be deployed independently — negating all the benefits of microservices."
+  },
+  {
+    "id": "q-db-fundamentals-acid-001",
+    "topicId": "database-fundamentals",
+    "subtopicId": "acid-indexing",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Which isolation level prevents phantom reads?",
+    "options": [
+      { "id": "a", "text": "READ UNCOMMITTED", "isCorrect": false },
+      { "id": "b", "text": "READ COMMITTED", "isCorrect": false },
+      { "id": "c", "text": "REPEATABLE READ", "isCorrect": false },
+      { "id": "d", "text": "SERIALIZABLE", "isCorrect": true }
+    ],
+    "explanation": "A phantom read occurs when a range query returns different rows on two executions within the same transaction (because another transaction inserted rows). REPEATABLE READ prevents non-repeatable reads on existing rows but not phantom reads. SERIALIZABLE is the only level that prevents all anomalies including phantom reads."
+  },
+  {
+    "id": "q-db-fundamentals-np1-001",
+    "topicId": "database-fundamentals",
+    "subtopicId": "acid-indexing",
+    "format": "code-reading",
+    "difficulty": "Mid",
+    "question": "How many SQL queries does the following code issue for 50 orders?\n```java\nList<Order> orders = orderRepo.findAll(); // 50 orders\nfor (Order order : orders) {\n    System.out.println(order.getItems().size());\n}\n```",
+    "options": [
+      { "id": "a", "text": "1", "isCorrect": false },
+      { "id": "b", "text": "50", "isCorrect": false },
+      { "id": "c", "text": "51", "isCorrect": true },
+      { "id": "d", "text": "100", "isCorrect": false }
+    ],
+    "explanation": "This is the N+1 problem. 1 query to load all 50 orders, then 1 query per order to lazy-load its items = 51 total queries. Fix with JOIN FETCH, @EntityGraph, or @BatchSize."
+  },
+  {
+    "id": "q-distributed-cap-001",
+    "topicId": "distributed-systems",
+    "subtopicId": "cap-consistency",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "During a network partition, a CP system like ZooKeeper will:",
+    "options": [
+      { "id": "a", "text": "Serve stale data to maintain availability", "isCorrect": false },
+      { "id": "b", "text": "Reject requests to maintain consistency", "isCorrect": true },
+      { "id": "c", "text": "Automatically resolve the partition", "isCorrect": false },
+      { "id": "d", "text": "Continue operating normally — CAP only applies to AP systems", "isCorrect": false }
+    ],
+    "explanation": "CP systems prioritise consistency over availability. During a partition, ZooKeeper will refuse writes (and sometimes reads) until a quorum can be established, preventing clients from reading stale or divergent data. AP systems like Cassandra do the opposite — they serve potentially stale data to remain available."
+  },
+  {
+    "id": "q-distributed-circuit-001",
+    "topicId": "distributed-systems",
+    "subtopicId": "resilience",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "A Circuit Breaker is in the OPEN state. What happens to incoming requests?",
+    "options": [
+      { "id": "a", "text": "They are queued and retried when the circuit closes", "isCorrect": false },
+      { "id": "b", "text": "They fail immediately without calling the downstream service", "isCorrect": true },
+      { "id": "c", "text": "They are routed to a backup service automatically", "isCorrect": false },
+      { "id": "d", "text": "They are forwarded to a probe thread for testing", "isCorrect": false }
+    ],
+    "explanation": "When OPEN, the circuit breaker fails requests immediately (throws CallNotPermittedException) without making the downstream call. This prevents threads from piling up waiting on a known-broken service. A fallback method handles the failure. After the wait duration, the circuit moves to HALF-OPEN to test recovery."
+  },
+  {
+    "id": "q-security-injection-001",
+    "topicId": "security-basics",
+    "subtopicId": "owasp-auth",
+    "format": "code-reading",
+    "difficulty": "Beginner",
+    "question": "Which of the following is vulnerable to SQL injection?\n```java\n// Option A\nString q = \"SELECT * FROM users WHERE email = ?\";\nps = conn.prepareStatement(q);\nps.setString(1, email);\n\n// Option B\nString q = \"SELECT * FROM users WHERE email = '\" + email + \"'\";\nStatement s = conn.createStatement();\ns.executeQuery(q);\n```",
+    "options": [
+      { "id": "a", "text": "Option A only", "isCorrect": false },
+      { "id": "b", "text": "Option B only", "isCorrect": true },
+      { "id": "c", "text": "Both A and B", "isCorrect": false },
+      { "id": "d", "text": "Neither", "isCorrect": false }
+    ],
+    "explanation": "Option B concatenates user input directly into SQL — a classic SQL injection vulnerability. Option A uses a parameterized prepared statement — the ? placeholder is bound separately and the DB driver ensures it is never interpreted as SQL syntax."
+  },
+  {
+    "id": "q-logging-mdc-001",
+    "topicId": "logging-observability",
+    "subtopicId": "structured-logging",
+    "format": "true-false",
+    "difficulty": "Mid",
+    "question": "MDC (Mapped Diagnostic Context) automatically propagates to threads created by CompletableFuture.supplyAsync().",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": false },
+      { "id": "b", "text": "False", "isCorrect": true }
+    ],
+    "explanation": "MDC uses ThreadLocal, which is thread-specific and does NOT propagate automatically to child threads. In CompletableFuture or @Async, you must explicitly copy the MDC context: Map<String,String> ctx = MDC.getCopyOfContextMap() and restore it in the child thread with MDC.setContextMap(ctx)."
+  },
+  {
+    "id": "q-data-structures-hashmap-001",
+    "topicId": "data-structures",
+    "subtopicId": "hash-tables",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "What is the time complexity of HashMap.get() in the worst case, and what causes it?",
+    "options": [
+      { "id": "a", "text": "O(log n) — caused by tree rebalancing", "isCorrect": false },
+      { "id": "b", "text": "O(n) — caused by all keys hashing to the same bucket", "isCorrect": true },
+      { "id": "c", "text": "O(1) — HashMap is always constant time", "isCorrect": false },
+      { "id": "d", "text": "O(n log n) — caused by the Red-Black tree within buckets", "isCorrect": false }
+    ],
+    "explanation": "In the worst case, all keys hash to the same bucket, forming a linked list of length n. Java 8+ converts buckets to Red-Black trees when they exceed 8 entries, reducing this to O(log n) worst case. But a pathological hash function can still create O(n) behaviour before treeification.",
+    "followUpQuestionId": "q-data-structures-hashmap-002"
+  },
+  {
+    "id": "q-data-structures-hashmap-002",
+    "topicId": "data-structures",
+    "subtopicId": "hash-tables",
+    "format": "true-false",
+    "difficulty": "Mid",
+    "question": "Two objects that are equal() must return the same hashCode().",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": true },
+      { "id": "b", "text": "False", "isCorrect": false }
+    ],
+    "explanation": "This is the equals/hashCode contract. If a.equals(b) is true, then a.hashCode() must equal b.hashCode(). Violating this causes HashMap to store duplicates and never find values — the map looks up by hashCode first, then confirms with equals. The reverse is not required: two unequal objects may have the same hashCode (collision)."
+  },
+  {
+    "id": "q-algorithms-complexity-001",
+    "topicId": "algorithms",
+    "subtopicId": "complexity-recursion",
+    "format": "multiple-choice",
+    "difficulty": "Beginner",
+    "question": "What is the time complexity of binary search on a sorted array of n elements?",
+    "options": [
+      { "id": "a", "text": "O(n)", "isCorrect": false },
+      { "id": "b", "text": "O(n log n)", "isCorrect": false },
+      { "id": "c", "text": "O(log n)", "isCorrect": true },
+      { "id": "d", "text": "O(1)", "isCorrect": false }
+    ],
+    "explanation": "Binary search halves the search space on every step. Starting with n elements: after 1 step n/2, after 2 steps n/4, ... after k steps n/2^k = 1, so k = log₂(n). This is O(log n).",
+    "followUpQuestionId": "q-algorithms-dp-001"
+  },
+  {
+    "id": "q-algorithms-dp-001",
+    "topicId": "algorithms",
+    "subtopicId": "complexity-recursion",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Which characteristic distinguishes a Dynamic Programming problem from plain recursion?",
+    "options": [
+      { "id": "a", "text": "DP problems have a base case; plain recursion does not", "isCorrect": false },
+      { "id": "b", "text": "DP problems have overlapping subproblems computed multiple times", "isCorrect": true },
+      { "id": "c", "text": "DP is always bottom-up; recursion is always top-down", "isCorrect": false },
+      { "id": "d", "text": "DP problems cannot be solved recursively", "isCorrect": false }
+    ],
+    "explanation": "The key DP characteristic is overlapping subproblems — the same subproblem is computed multiple times in a naive recursive solution. DP stores (memoizes) these results to avoid recomputation. Merge sort is recursive but NOT DP because its subproblems are disjoint (non-overlapping)."
+  },
+  {
+    "id": "q-algorithms-sorting-001",
+    "topicId": "algorithms",
+    "subtopicId": "sorting-searching",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Arrays.sort() on an int[] uses which algorithm?",
+    "options": [
+      { "id": "a", "text": "TimSort", "isCorrect": false },
+      { "id": "b", "text": "Merge Sort", "isCorrect": false },
+      { "id": "c", "text": "Dual-Pivot Quicksort", "isCorrect": true },
+      { "id": "d", "text": "Heap Sort", "isCorrect": false }
+    ],
+    "explanation": "Arrays.sort() uses Dual-Pivot Quicksort for primitive arrays (int[], long[], etc.) — it's fast in practice and doesn't need stability since primitives have no identity. For Object arrays (Integer[], String[]), Arrays.sort() uses TimSort, which is stable and guarantees O(n log n) worst case."
+  },
+  {
+    "id": "q-system-design-scaling-001",
+    "topicId": "system-design",
+    "subtopicId": "fundamentals",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "Which problem does horizontal scaling introduce that vertical scaling does not?",
+    "options": [
+      { "id": "a", "text": "Hardware cost", "isCorrect": false },
+      { "id": "b", "text": "Services must be stateless or share state via an external store", "isCorrect": true },
+      { "id": "c", "text": "Increased latency per request", "isCorrect": false },
+      { "id": "d", "text": "Inability to handle CPU-bound workloads", "isCorrect": false }
+    ],
+    "explanation": "Horizontal scaling adds more machines. If a service stores session state in-process (memory), requests from the same user hitting different instances will not find their session. Services must be stateless — externalising state to Redis, a DB, or a shared cache — so any instance can serve any request.",
+    "followUpQuestionId": "q-system-design-cache-001"
+  },
+  {
+    "id": "q-system-design-cache-001",
+    "topicId": "system-design",
+    "subtopicId": "fundamentals",
+    "format": "multiple-choice",
+    "difficulty": "Mid",
+    "question": "In cache-aside strategy, what happens on a cache miss?",
+    "options": [
+      { "id": "a", "text": "The request fails with a 503", "isCorrect": false },
+      { "id": "b", "text": "The application reads from the DB and populates the cache", "isCorrect": true },
+      { "id": "c", "text": "The cache fetches data from the DB automatically", "isCorrect": false },
+      { "id": "d", "text": "The request is queued until the cache is warm", "isCorrect": false }
+    ],
+    "explanation": "Cache-aside (lazy loading): the application checks the cache first; on a miss, it reads from the DB, stores the result in the cache, then returns it. The cache does NOT automatically fetch data — the application drives both reads and cache population. This is the most common caching pattern."
+  }
+]
