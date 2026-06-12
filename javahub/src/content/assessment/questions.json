@@ -487,5 +487,270 @@
       { "id": "d", "text": "The request is queued until the cache is warm", "isCorrect": false }
     ],
     "explanation": "Cache-aside (lazy loading): the application checks the cache first; on a miss, it reads from the DB, stores the result in the cache, then returns it. The cache does NOT automatically fetch data — the application drives both reads and cache population. This is the most common caching pattern."
-  }
+  },
+
+  { "id": "q-java-core-streams-001", "topicId": "java-core", "subtopicId": "streams",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "Which terminal operation returns an Optional containing the first element of a stream?",
+    "options": [
+      { "id": "a", "text": "stream.first()", "isCorrect": false },
+      { "id": "b", "text": "stream.findFirst()", "isCorrect": true },
+      { "id": "c", "text": "stream.get(0)", "isCorrect": false },
+      { "id": "d", "text": "stream.peek()", "isCorrect": false }
+    ],
+    "explanation": "findFirst() is a short-circuiting terminal operation that returns an Optional<T> containing the first element, or Optional.empty() if the stream is empty. get(0) is a List method, not a Stream method. peek() is an intermediate operation used for debugging." },
+
+  { "id": "q-java-core-streams-002", "topicId": "java-core", "subtopicId": "streams",
+    "format": "true-false", "difficulty": "Mid",
+    "question": "Streams in Java are lazy — intermediate operations are not executed until a terminal operation is called.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": true },
+      { "id": "b", "text": "False", "isCorrect": false }
+    ],
+    "explanation": "Stream pipelines are lazy by design. Intermediate operations (filter, map, flatMap) build a pipeline description but execute nothing. Only when a terminal operation (collect, forEach, findFirst) is called does the pipeline execute — and short-circuiting terminals stop after the first matching element." },
+
+  { "id": "q-java-core-optional-001", "topicId": "java-core", "subtopicId": "optional",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "What does Optional.orElseGet(() -> computeDefault()) do differently from Optional.orElse(computeDefault())?",
+    "options": [
+      { "id": "a", "text": "orElseGet is only for primitive types", "isCorrect": false },
+      { "id": "b", "text": "orElseGet lazily evaluates the supplier — computeDefault() only runs on empty", "isCorrect": true },
+      { "id": "c", "text": "orElse returns null if empty; orElseGet throws", "isCorrect": false },
+      { "id": "d", "text": "They are identical", "isCorrect": false }
+    ],
+    "explanation": "orElse(T other) always evaluates its argument — even if the Optional has a value. orElseGet(Supplier) only invokes the supplier when the Optional is empty. Use orElseGet when the default value is expensive to compute (DB call, new object creation) to avoid unnecessary work." },
+
+  { "id": "q-java-core-exceptions-001", "topicId": "java-core", "subtopicId": "exceptions",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "Which statement about checked vs unchecked exceptions is correct?",
+    "options": [
+      { "id": "a", "text": "Checked exceptions extend RuntimeException", "isCorrect": false },
+      { "id": "b", "text": "Unchecked exceptions must be declared with throws", "isCorrect": false },
+      { "id": "c", "text": "Checked exceptions must be caught or declared; unchecked need not be", "isCorrect": true },
+      { "id": "d", "text": "Only unchecked exceptions can be caught with catch", "isCorrect": false }
+    ],
+    "explanation": "Checked exceptions (extend Exception but not RuntimeException) must be caught or declared in the method signature with 'throws'. Unchecked exceptions (extend RuntimeException or Error) do not require this. Most modern APIs prefer unchecked to avoid verbose boilerplate." },
+
+  { "id": "q-java-core-records-001", "topicId": "java-core", "subtopicId": "records",
+    "format": "true-false", "difficulty": "Mid",
+    "question": "Java records are immutable — you cannot change their fields after construction.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": true },
+      { "id": "b", "text": "False", "isCorrect": false }
+    ],
+    "explanation": "Record components are implicitly final and private. The canonical constructor initializes them once; there are no setters. If a component holds a mutable object (e.g., a List), the reference is immutable but the object's contents can still be mutated — records are shallowly immutable." },
+
+  { "id": "q-java-core-generics-wildcards-001", "topicId": "java-core", "subtopicId": "generics",
+    "format": "multiple-choice", "difficulty": "Senior",
+    "question": "What does the PECS rule stand for in Java generics?",
+    "options": [
+      { "id": "a", "text": "Polymorphic Erasure Creates Subtypes", "isCorrect": false },
+      { "id": "b", "text": "Producer Extends, Consumer Super", "isCorrect": true },
+      { "id": "c", "text": "Primitive Erasure Casts Subtypes", "isCorrect": false },
+      { "id": "d", "text": "Parameter Extends, Collection Super", "isCorrect": false }
+    ],
+    "explanation": "PECS: use '? extends T' when a collection produces T values (you only read from it), and '? super T' when it consumes T values (you only write to it). Example: Collections.copy(List<? super T> dest, List<? extends T> src) — dest consumes, src produces." },
+
+  { "id": "q-java-core-string-001", "topicId": "java-core", "subtopicId": "strings",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "Why should you use StringBuilder instead of String concatenation in a loop?",
+    "options": [
+      { "id": "a", "text": "StringBuilder is type-safe; String is not", "isCorrect": false },
+      { "id": "b", "text": "String is immutable — each + creates a new object; StringBuilder mutates in place", "isCorrect": true },
+      { "id": "c", "text": "String concatenation is not allowed in Java", "isCorrect": false },
+      { "id": "d", "text": "StringBuilder works with null; String does not", "isCorrect": false }
+    ],
+    "explanation": "String objects are immutable. Every + concatenation creates a new String object and discards the old one, making loop concatenation O(n²) in memory allocations. StringBuilder maintains a resizable char array and appends in place, making it O(n) overall. The compiler optimises single-line concatenation but NOT loop bodies." },
+
+  { "id": "q-data-structures-array-001", "topicId": "data-structures", "subtopicId": "arrays",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "What is the time complexity of accessing an element by index in an array?",
+    "options": [
+      { "id": "a", "text": "O(n)", "isCorrect": false },
+      { "id": "b", "text": "O(log n)", "isCorrect": false },
+      { "id": "c", "text": "O(1)", "isCorrect": true },
+      { "id": "d", "text": "O(n log n)", "isCorrect": false }
+    ],
+    "explanation": "Array elements are stored in contiguous memory. Given base address and element size, index access computes the address directly: base + index × elementSize. This is constant time regardless of array size." },
+
+  { "id": "q-data-structures-linkedlist-001", "topicId": "data-structures", "subtopicId": "linked-lists",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "What is the main advantage of a linked list over an array?",
+    "options": [
+      { "id": "a", "text": "O(1) random access by index", "isCorrect": false },
+      { "id": "b", "text": "O(1) insertion and deletion at the head", "isCorrect": true },
+      { "id": "c", "text": "Better cache locality", "isCorrect": false },
+      { "id": "d", "text": "Lower memory overhead", "isCorrect": false }
+    ],
+    "explanation": "Inserting or deleting at the head of a linked list is O(1) — just update the head pointer. Arrays require O(n) shifting. However, linked lists have worse cache performance (nodes are scattered in memory) and no O(1) random access. Java's LinkedList also has higher per-element overhead (two pointers per node)." },
+
+  { "id": "q-data-structures-stack-001", "topicId": "data-structures", "subtopicId": "stacks-queues",
+    "format": "true-false", "difficulty": "Beginner",
+    "question": "A stack follows LIFO (Last In, First Out) ordering.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": true },
+      { "id": "b", "text": "False", "isCorrect": false }
+    ],
+    "explanation": "Stack: LIFO — the last element pushed is the first popped. Queue: FIFO — first in, first out. In Java, use Deque<T> (ArrayDeque implementation) for both stack and queue behavior. The legacy Stack class extends Vector and is not recommended." },
+
+  { "id": "q-data-structures-bst-001", "topicId": "data-structures", "subtopicId": "trees",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "In a balanced Binary Search Tree, what is the average time complexity for search, insert, and delete?",
+    "options": [
+      { "id": "a", "text": "O(n)", "isCorrect": false },
+      { "id": "b", "text": "O(1)", "isCorrect": false },
+      { "id": "c", "text": "O(log n)", "isCorrect": true },
+      { "id": "d", "text": "O(n log n)", "isCorrect": false }
+    ],
+    "explanation": "A balanced BST (AVL, Red-Black Tree) maintains height O(log n), giving O(log n) for search, insert, and delete. Java's TreeMap and TreeSet use a Red-Black Tree internally. An unbalanced BST degrades to O(n) in the worst case (sorted input creates a linear chain)." },
+
+  { "id": "q-data-structures-heap-001", "topicId": "data-structures", "subtopicId": "heaps",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "Which Java class implements a min-heap (priority queue)?",
+    "options": [
+      { "id": "a", "text": "TreeMap", "isCorrect": false },
+      { "id": "b", "text": "ArrayDeque", "isCorrect": false },
+      { "id": "c", "text": "PriorityQueue", "isCorrect": true },
+      { "id": "d", "text": "LinkedHashMap", "isCorrect": false }
+    ],
+    "explanation": "java.util.PriorityQueue is a min-heap by default (natural ordering) — poll() returns the smallest element in O(log n). For a max-heap, use PriorityQueue(Collections.reverseOrder()). Offer/add is O(log n); peek is O(1)." },
+
+  { "id": "q-data-structures-graph-001", "topicId": "data-structures", "subtopicId": "graphs",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "Which graph traversal algorithm uses a queue (BFS) and guarantees shortest path in an unweighted graph?",
+    "options": [
+      { "id": "a", "text": "Depth-First Search", "isCorrect": false },
+      { "id": "b", "text": "Breadth-First Search", "isCorrect": true },
+      { "id": "c", "text": "Dijkstra's Algorithm", "isCorrect": false },
+      { "id": "d", "text": "Bellman-Ford", "isCorrect": false }
+    ],
+    "explanation": "BFS explores level by level using a queue. Because it visits all nodes at distance k before distance k+1, the first time it reaches a node is via the shortest path (in terms of edge count). Dijkstra handles weighted graphs. DFS uses a stack and does not guarantee shortest paths." },
+
+  { "id": "q-data-structures-trie-001", "topicId": "data-structures", "subtopicId": "tries",
+    "format": "multiple-choice", "difficulty": "Senior",
+    "question": "What is the primary use case for a Trie data structure?",
+    "options": [
+      { "id": "a", "text": "Sorting numbers in O(n log n)", "isCorrect": false },
+      { "id": "b", "text": "Efficient prefix-based string search and autocomplete", "isCorrect": true },
+      { "id": "c", "text": "Finding shortest paths in a graph", "isCorrect": false },
+      { "id": "d", "text": "Caching recently used objects", "isCorrect": false }
+    ],
+    "explanation": "A Trie (prefix tree) stores strings by decomposing them character by character. Search, insert, and prefix lookup are all O(m) where m is the string length — independent of the number of stored strings. Used in autocomplete, spell checking, and IP routing tables." },
+
+  { "id": "q-data-structures-hashmap-003", "topicId": "data-structures", "subtopicId": "hash-tables",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "What happens in a HashMap when the load factor threshold is exceeded?",
+    "options": [
+      { "id": "a", "text": "New inserts throw an exception", "isCorrect": false },
+      { "id": "b", "text": "The map rehashes — creates a larger array and redistributes all entries", "isCorrect": true },
+      { "id": "c", "text": "Oldest entries are evicted to make space", "isCorrect": false },
+      { "id": "d", "text": "The load factor is automatically lowered", "isCorrect": false }
+    ],
+    "explanation": "When the number of entries exceeds capacity × loadFactor (default 0.75), HashMap doubles its internal array and rehashes all entries into the new positions. This is O(n) but amortized O(1) per insert. The default initial capacity is 16, so rehashing first occurs at ~12 entries." },
+
+  { "id": "q-oop-inheritance-001", "topicId": "oop", "subtopicId": "inheritance",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "What keyword allows a subclass to call its parent class's constructor in Java?",
+    "options": [
+      { "id": "a", "text": "parent()", "isCorrect": false },
+      { "id": "b", "text": "super()", "isCorrect": true },
+      { "id": "c", "text": "base()", "isCorrect": false },
+      { "id": "d", "text": "this()", "isCorrect": false }
+    ],
+    "explanation": "super() calls the parent class's constructor and must be the first statement in the subclass constructor. If not explicitly called, the compiler inserts super() (no-args). this() calls another constructor in the same class. Java has single inheritance for classes." },
+
+  { "id": "q-oop-polymorphism-001", "topicId": "oop", "subtopicId": "polymorphism",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "What is the difference between method overloading and method overriding?",
+    "options": [
+      { "id": "a", "text": "Overloading changes return type; overriding changes parameter list", "isCorrect": false },
+      { "id": "b", "text": "Overloading: same name, different params (compile-time); overriding: same signature in subclass (runtime)", "isCorrect": true },
+      { "id": "c", "text": "Overriding is only for static methods", "isCorrect": false },
+      { "id": "d", "text": "Overloading requires the @Override annotation", "isCorrect": false }
+    ],
+    "explanation": "Overloading (ad-hoc polymorphism): same method name, different parameter list — resolved at compile time. Overriding (subtype polymorphism): same signature in a subclass replaces the parent's implementation — resolved at runtime via dynamic dispatch. @Override annotation documents intent but is not required." },
+
+  { "id": "q-oop-encapsulation-001", "topicId": "oop", "subtopicId": "encapsulation",
+    "format": "true-false", "difficulty": "Beginner",
+    "question": "Making a field private and providing public getters/setters is the complete definition of encapsulation.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": false },
+      { "id": "b", "text": "False", "isCorrect": true }
+    ],
+    "explanation": "Encapsulation is about protecting invariants and hiding implementation details, not just adding getters/setters. A class with public setters that allow invalid state is poorly encapsulated. True encapsulation means the class controls all mutations — setters should validate, and sometimes objects should be immutable (no setters at all)." },
+
+  { "id": "q-oop-interface-001", "topicId": "oop", "subtopicId": "interfaces",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "What is a key difference between an abstract class and an interface in Java 8+?",
+    "options": [
+      { "id": "a", "text": "Interfaces cannot have any method implementations", "isCorrect": false },
+      { "id": "b", "text": "A class can implement multiple interfaces but can only extend one abstract class", "isCorrect": true },
+      { "id": "c", "text": "Abstract classes cannot have constructors", "isCorrect": false },
+      { "id": "d", "text": "Interfaces can have private fields", "isCorrect": false }
+    ],
+    "explanation": "Java allows a class to implement multiple interfaces (achieving a form of multiple inheritance) but only extend one class. Since Java 8, interfaces can have default and static methods with implementations. Abstract classes can have constructors, state (instance fields), and any access modifiers." },
+
+  { "id": "q-oop-composition-001", "topicId": "oop", "subtopicId": "composition",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "Why is 'Favour composition over inheritance' considered a best practice?",
+    "options": [
+      { "id": "a", "text": "Composition is always faster at runtime", "isCorrect": false },
+      { "id": "b", "text": "Composition avoids the fragile base class problem and is more flexible at runtime", "isCorrect": true },
+      { "id": "c", "text": "Inheritance cannot be used in Java 17+", "isCorrect": false },
+      { "id": "d", "text": "Composition uses less memory", "isCorrect": false }
+    ],
+    "explanation": "Inheritance creates tight coupling — changes to a base class can break subclasses in unexpected ways (fragile base class problem). Composition wires behaviour together via interfaces and delegates to contained objects, making it easy to swap implementations and avoid deep class hierarchies." },
+
+  { "id": "q-oop-solid-lsp-001", "topicId": "oop", "subtopicId": "solid",
+    "format": "multiple-choice", "difficulty": "Senior",
+    "question": "The Liskov Substitution Principle says a subclass should be substitutable for its base class. Which example VIOLATES this principle?",
+    "options": [
+      { "id": "a", "text": "Square extends Rectangle and overrides setWidth to also set height", "isCorrect": true },
+      { "id": "b", "text": "Dog extends Animal and overrides speak() to return 'Woof'", "isCorrect": false },
+      { "id": "c", "text": "ArrayList implements List", "isCorrect": false },
+      { "id": "d", "text": "FileInputStream extends InputStream", "isCorrect": false }
+    ],
+    "explanation": "The Square/Rectangle problem is the classic LSP violation. Code that holds a Rectangle and calls setWidth(5) expects height to remain unchanged, but a Square's setWidth also changes height — breaking the caller's assumptions. LSP requires subtypes to maintain the behavioural contracts of their base types." },
+
+  { "id": "q-oop-design-pattern-001", "topicId": "oop", "subtopicId": "design-patterns",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "Which design pattern ensures that a class has only one instance and provides a global access point to it?",
+    "options": [
+      { "id": "a", "text": "Factory", "isCorrect": false },
+      { "id": "b", "text": "Singleton", "isCorrect": true },
+      { "id": "c", "text": "Proxy", "isCorrect": false },
+      { "id": "d", "text": "Observer", "isCorrect": false }
+    ],
+    "explanation": "Singleton restricts instantiation to one object and provides a static access point (getInstance()). Thread-safe implementation: use an enum singleton or double-checked locking with a volatile field. Spring's default bean scope (@Component without @Scope) is singleton per application context." },
+
+  { "id": "q-oop-immutability-001", "topicId": "oop", "subtopicId": "immutability",
+    "format": "multiple-choice", "difficulty": "Mid",
+    "question": "Which of the following makes a Java class properly immutable?",
+    "options": [
+      { "id": "a", "text": "Declare the class final and all fields private", "isCorrect": false },
+      { "id": "b", "text": "Declare the class final, all fields private final, no setters, defensive copies in constructor and getters", "isCorrect": true },
+      { "id": "c", "text": "Implement Serializable and mark all fields transient", "isCorrect": false },
+      { "id": "d", "text": "Use synchronized on all methods", "isCorrect": false }
+    ],
+    "explanation": "True immutability requires: final class (no subclassing), private final fields, no setters, and defensive copies of mutable fields in the constructor AND getters (returning the internal reference lets callers mutate it). String, Integer, and all wrappers follow this pattern." },
+
+  { "id": "q-oop-equals-001", "topicId": "oop", "subtopicId": "object-methods",
+    "format": "true-false", "difficulty": "Mid",
+    "question": "If you override equals() in Java, you must also override hashCode() to maintain the general contract.",
+    "options": [
+      { "id": "a", "text": "True", "isCorrect": true },
+      { "id": "b", "text": "False", "isCorrect": false }
+    ],
+    "explanation": "The equals/hashCode contract: objects that are equal (equals() returns true) must have the same hashCode. If you override equals without hashCode, equal objects may end up in different HashMap buckets — lookups will fail even for 'equal' keys. Always override both, or use @EqualsAndHashCode (Lombok) or Java 16+ records which auto-generate both." },
+
+  { "id": "q-oop-access-001", "topicId": "oop", "subtopicId": "access-modifiers",
+    "format": "multiple-choice", "difficulty": "Beginner",
+    "question": "What is the visibility of a 'protected' member in Java?",
+    "options": [
+      { "id": "a", "text": "Only within the same class", "isCorrect": false },
+      { "id": "b", "text": "Only within the same package", "isCorrect": false },
+      { "id": "c", "text": "Within the same package AND subclasses (even in different packages)", "isCorrect": true },
+      { "id": "d", "text": "Visible everywhere (same as public)", "isCorrect": false }
+    ],
+    "explanation": "protected = same package + subclasses in any package. Visibility from most to least: public > protected > package-private (no modifier) > private. Protected is commonly used for template method patterns where a base class exposes hooks to subclasses but not to arbitrary callers." }
 ]

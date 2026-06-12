@@ -54,12 +54,20 @@ export default function TopicPage() {
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{topic.group}</p>
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-xl md:text-2xl font-bold text-gray-100">{topic.title}</h1>
-            <Link
-              to={`/topic/${topic.id}/study`}
-              className="flex-shrink-0 px-3 py-1.5 md:px-4 md:py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              Study →
-            </Link>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link
+                to={`/topic/${topic.id}/quiz`}
+                className="px-3 py-1.5 md:px-4 md:py-2 border border-indigo-500 text-indigo-400 hover:bg-indigo-500/10 text-sm font-medium rounded-lg transition-colors"
+              >
+                Take Quiz
+              </Link>
+              <Link
+                to={`/topic/${topic.id}/study`}
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Study →
+              </Link>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3 text-sm text-gray-400 flex-wrap">

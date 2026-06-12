@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AppProgress, CardProgress, CardStatus } from '@/types'
-import type { AssessmentSession, AssessmentAnswer, UserProfile } from '@/types/content'
+import type { AssessmentSession, AssessmentAnswer, UserProfile, QuizAttempt } from '@/types/content'
 import { SM2_DEFAULT_STATE } from '@/lib/sm2'
 
 const initialProgress: AppProgress = {
@@ -39,6 +39,9 @@ interface AppStore extends AppProgress {
   // User profile
   userProfile: UserProfile
   setUserProfile: (profile: Partial<UserProfile>) => void
+  // Quiz history
+  quizHistory: Record<string, QuizAttempt[]>
+  recordQuizAttempt: (attempt: QuizAttempt) => void
 }
 
 export const useAppStore = create<AppStore>()(
@@ -56,6 +59,15 @@ export const useAppStore = create<AppStore>()(
 
       setUserProfile: (profile) => {
         set(state => ({ userProfile: { ...state.userProfile, ...profile } }))
+      },
+      quizHistory: {},
+      recordQuizAttempt: (attempt) => {
+        set(state => ({
+          quizHistory: {
+            ...state.quizHistory,
+            [attempt.topicId]: [...(state.quizHistory[attempt.topicId] ?? []), attempt],
+          },
+        }))
       },
 
 

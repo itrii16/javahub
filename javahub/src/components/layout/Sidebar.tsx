@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { topics } from '@/content'
+import { useAppStore } from '@/store/useAppStore'
 import type { TopicGroup } from '@/types'
 
 const GROUP_ORDER: TopicGroup[] = [
@@ -27,6 +28,7 @@ interface Props {
 export default function Sidebar({ onNavigate }: Props) {
   const { topicId } = useParams()
   const grouped = groupTopics()
+  const quizHistory = useAppStore(s => s.quizHistory)
 
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(topicId ? [topicId] : [])
@@ -59,13 +61,23 @@ export default function Sidebar({ onNavigate }: Props) {
                     <Link
                       to={`/topic/${topic.id}`}
                       onClick={onNavigate}
-                      className={`flex-1 px-4 py-2.5 text-sm transition-colors truncate ${
+                      className={`flex-1 px-4 py-2.5 text-sm transition-colors truncate flex items-center justify-between gap-2 ${
                         isActive
                           ? 'text-indigo-400 bg-indigo-500/10 font-medium'
                           : 'text-gray-300 hover:text-gray-100 hover:bg-gray-800'
                       }`}
                     >
-                      {topic.title}
+                      <span className="truncate">{topic.title}</span>
+                      {(() => {
+                        const attempts = quizHistory[topic.id]
+                        if (!attempts?.length) return null
+                        const best = Math.max(...attempts.map(a => Math.round((a.score / a.total) * 100)))
+                        return (
+                          <span className={`flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-mono ${
+                            best >= 70 ? 'bg-green-900/40 text-green-400' : 'bg-yellow-900/40 text-yellow-400'
+                          }`}>{best}%</span>
+                        )
+                      })()}
                     </Link>
                     {topic.subtopics.length > 1 && (
                       <button

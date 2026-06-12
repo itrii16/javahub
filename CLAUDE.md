@@ -66,7 +66,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 ### F3 — Quiz / Practice Mode (Phase 3)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T23 | Per-topic quiz UI: question flow, immediate feedback, results page | ⬜ Pending |
+| T23 | Per-topic quiz UI: question flow, immediate feedback, results page | ✅ Done |
 | T24 | Interview simulation mode: timed 30Q quiz, results, PDF print report | ⬜ Pending |
 
 ### F4 — Cheat Sheets (Phase 3)
