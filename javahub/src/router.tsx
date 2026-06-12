@@ -5,6 +5,7 @@ import HomePage from '@/pages/HomePage'
 import TopicPage from '@/pages/TopicPage'
 import CardDetailPage from '@/pages/CardDetailPage'
 import StudyPage from '@/pages/StudyPage'
+import SessionSummaryPage from '@/pages/SessionSummaryPage'
 
 export const router = createBrowserRouter(
   [
@@ -40,8 +41,13 @@ export const router = createBrowserRouter(
             crumb: () => 'Study',
           },
         },
+        {
+          path: 'topic/:topicId/study/summary',
+          element: <SessionSummaryPage />,
+          handle: { crumb: () => 'Session Summary' },
+        },
       ],
     },
   ],
-  { basename: '/company-yearbook' }
+  { basename: '/javahub' }
 )

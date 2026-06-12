@@ -22,4 +22,5 @@ export interface AppProgress {
     count: number
   }
   sessionCount: number
+  guidedPathTopics: string[]
 }
