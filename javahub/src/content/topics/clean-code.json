@@ -1,0 +1,75 @@
+{
+  "id": "clean-code",
+  "title": "Clean Code",
+  "group": "Engineering Principles",
+  "estimatedMinutes": 45,
+  "subtopics": [
+    {
+      "id": "naming-functions",
+      "title": "Naming & Functions",
+      "cards": [
+        {
+          "id": "clean-code-naming-functions-naming",
+          "topicId": "clean-code",
+          "subtopicId": "naming-functions",
+          "title": "Meaningful Names",
+          "difficulty": "Beginner",
+          "explanation": "Names should reveal intent: why a thing exists, what it does, and how it is used. A name that requires a comment is a failure. Use nouns for classes and variables, verbs for methods. Avoid abbreviations, single-letter names (except loop indices), and type-encoding prefixes (Hungarian notation). Distinguish names meaningfully — ProductInfo and ProductData are the same concept; choose one. Length should be proportional to scope: a loop variable can be i, a class field should be descriptive.",
+          "codeExample": "// Bad names\nint d;                          // elapsed time?\nList<int[]> theList;            // list of what?\nboolean flag;                   // flag for what?\nvoid process(List<int[]> l) {}  // process how?\n\n// Good names\nint elapsedDays;\nList<Cell> gameBoard;\nboolean isActive;\nvoid calculateMonthlySales(List<Order> orders) {}\n\n// Don't encode the type\nString nameString;   // just: name\nList userList;       // just: users\nint[] intArray;      // just: scores\n\n// Don't make readers decode\nvoid send(String m, String r);  // m=message? r=recipient?\nvoid sendEmail(String message, String recipientEmail); // clear",
+          "whyItMatters": "Developers read code far more often than they write it. Clear names reduce the cognitive load of every future reader — including yourself six months later. Good names also make code reviews faster and bugs easier to spot.",
+          "gotcha": "Consistency is more important than perfection. If the codebase uses 'customer', don't introduce 'client' for the same concept. Inconsistent synonyms force readers to wonder if the distinction is meaningful."
+        },
+        {
+          "id": "clean-code-naming-functions-functions",
+          "topicId": "clean-code",
+          "subtopicId": "naming-functions",
+          "title": "Function Design",
+          "difficulty": "Beginner",
+          "explanation": "Functions should do one thing, do it well, and do it only. A function that creates an order, charges a card, and sends a confirmation email does three things. The 'one thing' rule: if you can extract a sub-function with a name that is not just a restatement of the implementation, the function is doing more than one thing. Ideal: 0 parameters (niladic). Acceptable: 1–2. Problematic: 3. Avoid boolean flag parameters — they announce the function does two things depending on the flag.",
+          "codeExample": "// Too many responsibilities\npublic Order checkout(Cart cart, boolean sendEmail, boolean isGuest) {\n    Order order = createOrder(cart);\n    if (isGuest) createGuestAccount(cart);\n    payment.charge(order);\n    inventory.reserve(order);\n    if (sendEmail) notifier.sendConfirmation(order);\n    return order;\n}\n\n// After: focused functions, no flag params\npublic Order placeOrder(Cart cart) {\n    Order order = createOrder(cart);\n    payment.charge(order);\n    inventory.reserve(order);\n    return order;\n}\n\npublic void notifyCustomer(Order order) {\n    notifier.sendConfirmation(order);\n}\n\n// Flag param anti-pattern — split into two methods\nvoid render(boolean isSuite) {}  // bad\nvoid renderSingle() {}           // good\nvoid renderSuite() {}            // good",
+          "whyItMatters": "Small, focused functions are individually testable, reusable, and understandable. A function that does one thing has at most one reason to break. Debugging is faster because the call stack clearly shows which step failed.",
+          "gotcha": "Extract-till-you-drop taken too far produces functions so small they are harder to follow than the original. If a 3-line helper only ever has one caller and its name is just a paraphrase of its code, the extraction may not be worth it."
+        },
+        {
+          "id": "clean-code-naming-functions-comments",
+          "topicId": "clean-code",
+          "subtopicId": "naming-functions",
+          "title": "Comments — When and When Not",
+          "difficulty": "Mid",
+          "explanation": "The best comment is no comment — the code explains itself. Write a comment only when the WHY is non-obvious: a hidden constraint, a business rule not derivable from the code, a workaround for a known library bug, or a performance optimisation that looks wrong. Never write comments that restate what the code does. Commented-out code is noise — delete it, it's in version control. Misleading comments (stale after refactoring) are worse than no comment.",
+          "codeExample": "// Bad: restates the code\ni++;  // increment i\n\n// Bad: commented-out code\n// userService.sendEmail(user);\n// userService.recordAudit(user);\nuserService.register(user);\n\n// Good: explains the non-obvious WHY\n// Kafka consumer must commit offsets manually — auto-commit\n// is disabled because we process in batches and only want to\n// commit after the entire batch is persisted (at-least-once).\nconsumer.commitSync();\n\n// Good: workaround for a known issue\n// Thread.sleep here because the SQS client has a bug where\n// in-flight messages are not visible to deleteMessage for\n// ~50ms after receive. Remove after upgrading to aws-sdk 2.20.\nThread.sleep(100);\n\n// Good: legal / licence header (required)\n// Copyright 2025 Acme Corp. Apache-2.0 license.",
+          "whyItMatters": "Comments that restate code must be maintained in sync with the code. When they drift (and they always do), they actively mislead future readers. Code that needs a comment to be understood is code that should be renamed or refactored.",
+          "gotcha": "Javadoc on public API methods is not a 'comment' in the bad sense — it's machine-readable contract documentation. The 'avoid comments' rule applies to inline code comments, not API documentation."
+        }
+      ]
+    },
+    {
+      "id": "formatting-errors",
+      "title": "Formatting & Error Handling",
+      "cards": [
+        {
+          "id": "clean-code-formatting-errors-formatting",
+          "topicId": "clean-code",
+          "subtopicId": "formatting-errors",
+          "title": "Code Formatting",
+          "difficulty": "Beginner",
+          "explanation": "Formatting communicates structure. The newspaper metaphor: high-level concepts at the top, details below — just like a newspaper article leads with the summary. Vertical distance: related code should be close; callee functions should appear just below their callers. Horizontal width: stay under ~120 characters. Team consistency trumps personal preference — use an automated formatter (Spotless, Google Java Format, Checkstyle) so formatting is never a review topic.",
+          "codeExample": "// Newspaper metaphor: high-level entry point first\npublic class OrderProcessor {\n\n    // Public API at the top (high-level)\n    public Order process(Cart cart) {\n        Order order = buildOrder(cart);\n        applyDiscounts(order);\n        persist(order);\n        return order;\n    }\n\n    // Private helpers below (details)\n    private Order buildOrder(Cart cart) { ... }\n    private void applyDiscounts(Order order) { ... }\n    private void persist(Order order) { ... }\n}\n\n// Vertical openness: blank lines between concepts\nclass UserService {\n    private final UserRepository repo;\n    private final Notifier notifier;\n\n    public User register(UserRequest req) {\n        validate(req);\n        User user = createUser(req);\n        repo.save(user);\n\n        notifier.sendWelcome(user); // blank line: different concept starts\n        return user;\n    }\n}",
+          "whyItMatters": "Consistent formatting reduces the cognitive overhead of reading. Automated formatters (run in pre-commit hooks or CI) eliminate style debates entirely — every file looks the same regardless of who wrote it.",
+          "gotcha": "Formatting is a team agreement, not a personal style. Configure your formatter once, commit the config, and enforce it in CI. A PR that touches 500 lines only because of reformatting is expensive to review and obscures the actual change."
+        },
+        {
+          "id": "clean-code-formatting-errors-error-handling",
+          "topicId": "clean-code",
+          "subtopicId": "formatting-errors",
+          "title": "Error Handling",
+          "difficulty": "Mid",
+          "explanation": "Use exceptions rather than return codes — they separate the happy path from error handling, making both easier to read. Prefer unchecked (runtime) exceptions for programming errors and checked exceptions only for recoverable conditions the caller can meaningfully handle. Never swallow exceptions silently. Don't return null from methods — return Optional<T> or throw. Wrap third-party exceptions so callers aren't coupled to the library's exception hierarchy.",
+          "codeExample": "// Bad: return code forces caller to check every time\nint result = repository.save(user); // -1 means error?\nif (result == -1) { handleError(); }\n\n// Good: exceptions for exceptional conditions\nrepository.save(user); // throws DataAccessException on failure\n\n// Never swallow exceptions\ntry {\n    process();\n} catch (Exception e) {\n    // BAD: swallowed — failure is invisible\n}\n\n// Wrap third-party exceptions\npublic User findById(long id) {\n    try {\n        return repository.findById(id); // throws HibernateException\n    } catch (HibernateException e) {\n        throw new UserNotFoundException(\"User \" + id + \" not found\", e);\n        // callers don't need to know about Hibernate\n    }\n}\n\n// Avoid null returns\npublic Optional<User> findByEmail(String email) {\n    return Optional.ofNullable(db.findByEmail(email));\n}",
+          "whyItMatters": "Silently swallowed exceptions cause production bugs that are nearly impossible to diagnose. Returning null forces every caller to null-check, and the ones that forget cause NPEs far from the source. Consistent exception handling makes failure visible and diagnosable.",
+          "gotcha": "Checked exceptions in Java force callers to handle or declare them, which is useful for truly recoverable conditions. However, Java's checked exceptions are controversial — Spring and most modern Java frameworks use unchecked exceptions exclusively to avoid forcing them through every call stack layer."
+        }
+      ]
+    }
+  ]
+}

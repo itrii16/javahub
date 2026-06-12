@@ -1,0 +1,75 @@
+{
+  "id": "refactoring",
+  "title": "Refactoring Techniques",
+  "group": "Engineering Principles",
+  "estimatedMinutes": 60,
+  "subtopics": [
+    {
+      "id": "code-smells",
+      "title": "Code Smells",
+      "cards": [
+        {
+          "id": "refactoring-code-smells-long-method-large-class",
+          "topicId": "refactoring",
+          "subtopicId": "code-smells",
+          "title": "Long Method & Large Class",
+          "difficulty": "Beginner",
+          "explanation": "A long method is one that does too much — if you need to scroll to read it or need comments to explain sections, it's too long. The fix is Extract Method: find a coherent chunk, give it a name, move it. A large class has too many fields and methods — it's violating SRP. The rule of three for duplication: when you see something copied three times, extract it. Name extracted methods after what they accomplish, not how they do it.",
+          "codeExample": "// Long method: multiple levels of abstraction mixed together\npublic void processOrder(Order order) {\n    // validate\n    if (order.getItems().isEmpty()) throw new IllegalArgumentException();\n    if (order.getCustomer() == null) throw new IllegalArgumentException();\n\n    // calculate total\n    double total = 0;\n    for (Item item : order.getItems()) {\n        total += item.getPrice() * item.getQty();\n    }\n    if (order.hasPromoCode()) total *= 0.9;\n\n    // persist and notify\n    order.setTotal(total);\n    repository.save(order);\n    emailService.send(order.getCustomer().getEmail(), \"Your order: \" + total);\n}\n\n// After Extract Method\npublic void processOrder(Order order) {\n    validate(order);\n    order.setTotal(calculateTotal(order));\n    repository.save(order);\n    notifyCustomer(order);\n}\n\nprivate void validate(Order order) { ... }\nprivate double calculateTotal(Order order) { ... }\nprivate void notifyCustomer(Order order) { ... }",
+          "whyItMatters": "Long methods are the most common maintainability problem in real codebases. Each extracted method is independently testable, nameable, and reusable. Extraction also forces you to think about the right abstraction level at each call site.",
+          "gotcha": "Don't extract methods mechanically — extract when you can give the extracted piece a good name that is NOT a paraphrase of its implementation. If the best name you can come up with is doStep3(), the extraction is creating structure without clarity."
+        },
+        {
+          "id": "refactoring-code-smells-feature-envy-data-clumps",
+          "topicId": "refactoring",
+          "subtopicId": "code-smells",
+          "title": "Feature Envy & Data Clumps",
+          "difficulty": "Mid",
+          "explanation": "Feature Envy: a method is more interested in another class's data than its own. It calls multiple getters on another object to do its work — the method belongs in the class it envies. Data Clumps: groups of data items that always appear together (city, state, zipCode; firstName, lastName, email) should be extracted into their own class. The test: if you remove one item from the group, does the rest still make sense together? If yes, it's a clump.",
+          "codeExample": "// Feature Envy: calculateShipping lives in Order but works on Address fields\nclass Order {\n    private Address shippingAddress;\n\n    public double calculateShipping() {\n        // envies Address — all this logic belongs in Address or ShippingCalculator\n        if (shippingAddress.getCountry().equals(\"US\")) {\n            if (shippingAddress.getState().equals(\"CA\")) return 5.0;\n            return 8.0;\n        }\n        return 25.0;\n    }\n}\n\n// Fix: Move Method to Address (or a ShippingCalculator)\nclass Address {\n    public double calculateShipping() {\n        if (country.equals(\"US\")) {\n            return state.equals(\"CA\") ? 5.0 : 8.0;\n        }\n        return 25.0;\n    }\n}\n\n// Data Clump: street, city, state, zip always travel together\nvoid createUser(String name, String street, String city,\n                String state, String zip, String email) { }\n\n// Fix: Introduce Parameter Object\nrecord Address(String street, String city, String state, String zip) {}\nvoid createUser(String name, Address address, String email) { }",
+          "whyItMatters": "Feature Envy produces code that breaks encapsulation and scatters related logic. When the envied class changes, you also have to change the envying class. Moving the method where the data lives makes changes local and reduces coupling.",
+          "gotcha": "Feature Envy doesn't always mean the method belongs on the envied class. Sometimes it signals a missing abstraction — a third class that the method should be on. Consider whether the method is working with the envied class directly or working with the concept it represents."
+        },
+        {
+          "id": "refactoring-code-smells-primitive-obsession",
+          "topicId": "refactoring",
+          "subtopicId": "code-smells",
+          "title": "Primitive Obsession & Shotgun Surgery",
+          "difficulty": "Mid",
+          "explanation": "Primitive Obsession: using primitives (String, int, double) for domain concepts that deserve their own type. An email address as String can hold any string. A money amount as double loses precision. Replacing primitives with value objects (Email, Money, PhoneNumber) centralizes validation, makes types self-documenting, and prevents category errors. Shotgun Surgery: one logical change requires many small edits scattered across unrelated classes — the opposite of SRP. The fix is to consolidate the scattered logic into one class.",
+          "codeExample": "// Primitive Obsession\nvoid send(String toEmail, String fromEmail, double amountUsd) {\n    // Is toEmail valid? Is amountUsd positive? Who knows!\n}\n\n// Fix: Value Objects\nrecord Email(String value) {\n    Email {\n        if (!value.contains(\"@\")) throw new IllegalArgumentException(\"Invalid email\");\n    }\n}\n\nrecord Money(BigDecimal amount, Currency currency) {\n    Money { if (amount.compareTo(BigDecimal.ZERO) < 0) throw new IllegalArgumentException(); }\n    public Money add(Money other) {\n        if (!currency.equals(other.currency)) throw new CurrencyMismatchException();\n        return new Money(amount.add(other.amount), currency);\n    }\n}\n\nvoid send(Email to, Email from, Money amount) { } // self-documenting, safe\n\n// Shotgun Surgery: adding a new payment method requires editing\n// Order.java, Invoice.java, Receipt.java, Report.java, PaymentController.java...\n// Fix: extract a PaymentMethodRegistry that all of them consult",
+          "whyItMatters": "Value objects eliminate entire categories of bugs (invalid emails, negative amounts, currency mismatches) at compile time or at construction time. They make APIs self-documenting and prevent passing arguments in the wrong order.",
+          "gotcha": "Java records (Java 16+) are perfect for value objects: immutable, equals/hashCode/toString auto-generated, compact syntax. Use them instead of writing manual equals/hashCode for small domain value types."
+        }
+      ]
+    },
+    {
+      "id": "refactoring-patterns",
+      "title": "Fowler Refactoring Catalog",
+      "cards": [
+        {
+          "id": "refactoring-refactoring-patterns-extract-inline",
+          "topicId": "refactoring",
+          "subtopicId": "refactoring-patterns",
+          "title": "Extract Method & Inline Method",
+          "difficulty": "Beginner",
+          "explanation": "Extract Method: take a code fragment, put it in its own method, call the new method from where the fragment was. Apply when: the code has a comment explaining what it does (the comment becomes the method name), the code is duplicated in two or more places, or the method is long. Inline Method is the inverse: when a method body is as clear as its name, replace calls with the body. Apply when a method is called only once and adds no clarity, or when over-extracted micro-methods obscure rather than clarify.",
+          "codeExample": "// Before Extract\npublic double getPayAmount() {\n    double result;\n    if (isDead) {\n        result = deadAmount();\n    } else {\n        if (isSeparated) {\n            result = separatedAmount();\n        } else {\n            if (isRetired) {\n                result = retiredAmount();\n            } else {\n                result = normalPayAmount();\n            }\n        }\n    }\n    return result;\n}\n\n// After Extract + guard clauses\npublic double getPayAmount() {\n    if (isDead)      return deadAmount();\n    if (isSeparated) return separatedAmount();\n    if (isRetired)   return retiredAmount();\n    return normalPayAmount();\n}\n\n// Inline: when indirection doesn't earn its keep\nprivate boolean moreThanFiveLateDeliveries() {\n    return numberOfLateDeliveries > 5; // obvious — inline it\n}\n// After inline:\nif (numberOfLateDeliveries > 5) { ... }",
+          "whyItMatters": "Extract Method is the single most commonly applied refactoring. It's the primary tool for making long methods manageable. Guard clauses (early returns replacing nested ifs) dramatically reduce indentation depth and make the exceptional cases visible before the main logic.",
+          "gotcha": "Multiple return statements were once considered bad practice ('single exit point'). Modern clean code embraces early returns (guard clauses) because they eliminate nesting and make precondition checks explicit. The single-exit rule applies to languages without exceptions, not Java."
+        },
+        {
+          "id": "refactoring-refactoring-patterns-replace-conditional-polymorphism",
+          "topicId": "refactoring",
+          "subtopicId": "refactoring-patterns",
+          "title": "Replace Conditional with Polymorphism",
+          "difficulty": "Mid",
+          "explanation": "When a switch or if/else chain selects behaviour based on the type of an object, replace it with polymorphism: create subclasses or strategy implementations, move each branch into the appropriate subclass's override. This satisfies OCP — new types extend rather than modify the switch. Java's pattern matching (Java 21 switch expressions) can reduce boilerplate but the underlying design problem remains unless type dispatch lives in the right class.",
+          "codeExample": "// Type-code switch — grows with every new bird type\nclass Bird {\n    BirdType type;\n    double getSpeed() {\n        return switch (type) {\n            case EUROPEAN  -> baseSpeed();\n            case AFRICAN   -> baseSpeed() - loadFactor() * numberOfCoconuts;\n            case NORWEGIAN -> isNailed ? 0 : baseSpeed() + 10.0;\n        };\n    }\n}\n\n// After: Replace Conditional with Polymorphism\nabstract class Bird {\n    abstract double getSpeed();\n}\n\nclass EuropeanBird extends Bird {\n    double getSpeed() { return baseSpeed(); }\n}\n\nclass AfricanBird extends Bird {\n    double getSpeed() { return baseSpeed() - loadFactor() * numberOfCoconuts; }\n}\n\nclass NorwegianBird extends Bird {\n    boolean isNailed;\n    double getSpeed() { return isNailed ? 0 : baseSpeed() + 10.0; }\n}\n// New bird type: add class. Zero edits to existing code.",
+          "whyItMatters": "Type-code switches are a maintenance liability — adding a new type means hunting down every switch in the codebase. Polymorphism localises each type's behaviour in one place, making new types additive rather than surgical.",
+          "gotcha": "Polymorphism requires an object model (classes/interfaces). When you're processing external data (JSON, DB rows) and the 'type' is a string, you often need a Factory to map strings to objects first. The switch-on-string at the factory boundary is acceptable; switches scattered throughout the domain are not."
+        }
+      ]
+    }
+  ]
+}
