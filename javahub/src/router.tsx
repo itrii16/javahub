@@ -43,5 +43,5 @@ export const router = createBrowserRouter(
       ],
     },
   ],
-  { basename: '/company-yearbook' }
+  { basename: '/javahub' }
 )
