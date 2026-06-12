@@ -1,0 +1,75 @@
+{
+  "id": "testing",
+  "title": "Testing",
+  "group": "Engineering Principles",
+  "estimatedMinutes": 75,
+  "subtopics": [
+    {
+      "id": "unit-testing",
+      "title": "Unit Testing with JUnit 5 & Mockito",
+      "cards": [
+        {
+          "id": "testing-unit-testing-junit5-basics",
+          "topicId": "testing",
+          "subtopicId": "unit-testing",
+          "title": "JUnit 5 Basics",
+          "difficulty": "Beginner",
+          "explanation": "JUnit 5 (Jupiter) is the current standard for Java unit tests. Core annotations: @Test marks a test method, @BeforeEach/@AfterEach run before/after every test, @BeforeAll/@AfterAll run once for the class (must be static), @Disabled skips a test. Assertions are in org.junit.jupiter.api.Assertions: assertEquals, assertTrue, assertThrows, assertAll. @DisplayName gives tests a human-readable description that appears in reports.",
+          "codeExample": "import org.junit.jupiter.api.*;\nimport static org.junit.jupiter.api.Assertions.*;\n\nclass CalculatorTest {\n\n    private Calculator calc;\n\n    @BeforeEach\n    void setUp() {\n        calc = new Calculator();\n    }\n\n    @Test\n    @DisplayName(\"Adding two positive numbers returns their sum\")\n    void addPositives() {\n        assertEquals(5, calc.add(2, 3));\n    }\n\n    @Test\n    void divideByZeroThrows() {\n        ArithmeticException ex = assertThrows(\n            ArithmeticException.class,\n            () -> calc.divide(10, 0)\n        );\n        assertEquals(\"/ by zero\", ex.getMessage());\n    }\n\n    @Test\n    void multipleAssertions() {\n        // assertAll: all assertions run even if one fails\n        assertAll(\n            () -> assertEquals(0,  calc.add(0, 0)),\n            () -> assertEquals(-1, calc.add(1, -2)),\n            () -> assertEquals(10, calc.add(5, 5))\n        );\n    }\n}",
+          "whyItMatters": "JUnit 5 is the entry point for test-driven development in Java. assertThrows is the idiomatic way to test exceptions (replacing the old @Test(expected=...) which couldn't assert the message). assertAll groups related assertions so one failure doesn't hide the others.",
+          "gotcha": "@BeforeAll and @AfterAll methods must be static (unless the test class is annotated @TestInstance(PER_CLASS)). A common mistake is forgetting static and getting a confusing 'no static method' error."
+        },
+        {
+          "id": "testing-unit-testing-mockito",
+          "topicId": "testing",
+          "subtopicId": "unit-testing",
+          "title": "Mockito Fundamentals",
+          "difficulty": "Mid",
+          "explanation": "Mockito creates test doubles: mock() creates an object that records calls and returns default values; spy() wraps a real object, delegating to the real methods unless stubbed. @Mock + @InjectMocks + @ExtendWith(MockitoExtension.class) wires everything via annotations. when/thenReturn stubs return values; verify checks that a method was called. ArgumentCaptor captures arguments for assertion.",
+          "codeExample": "import org.mockito.*;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.junit.jupiter.MockitoExtension;\nimport static org.mockito.Mockito.*;\n\n@ExtendWith(MockitoExtension.class)\nclass OrderServiceTest {\n\n    @Mock\n    private OrderRepository repo;\n\n    @Mock\n    private Notifier notifier;\n\n    @InjectMocks\n    private OrderService service; // Mockito injects @Mock fields\n\n    @Test\n    void placeOrderSavesAndNotifies() {\n        Order order = new Order(\"item-1\", 2);\n\n        // Stub: when repo.save is called, return the order with id set\n        when(repo.save(order)).thenReturn(order.withId(42L));\n\n        service.place(order);\n\n        // Verify interactions\n        verify(repo).save(order);\n        verify(notifier).sendConfirmation(argThat(o -> o.getId() == 42L));\n    }\n\n    @Test\n    void captureArgument() {\n        ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);\n        service.place(new Order(\"item-1\", 1));\n        verify(repo).save(captor.capture());\n        assertEquals(\"item-1\", captor.getValue().getItemId());\n    }\n}",
+          "whyItMatters": "Mockito lets you test a class in isolation by replacing its collaborators with controllable doubles. This makes tests fast (no DB, no HTTP), deterministic, and focused on the unit under test rather than its dependencies.",
+          "gotcha": "verify(mock).method() asserts the method was called exactly once. Use verify(mock, times(2)) for two calls, verify(mock, never()) for zero calls. Failing to use verify at all makes the test incomplete — it only checks the return value, not side effects."
+        },
+        {
+          "id": "testing-unit-testing-first-principles",
+          "topicId": "testing",
+          "subtopicId": "unit-testing",
+          "title": "Test Design — F.I.R.S.T. & Arrange-Act-Assert",
+          "difficulty": "Mid",
+          "explanation": "Good tests are Fast (run in milliseconds, no I/O), Independent (no shared state between tests, any order), Repeatable (same result every run, no random data or time dependencies), Self-validating (pass or fail, no manual inspection), Timely (written before or alongside the code). The Arrange-Act-Assert (AAA) structure gives every test a clear three-part shape: set up the preconditions, perform the action, assert the outcome.",
+          "codeExample": "@Test\nvoid transferReducesSenderBalance() {\n    // Arrange\n    Account sender    = new Account(\"alice\", Money.of(100));\n    Account recipient = new Account(\"bob\",   Money.of(0));\n\n    // Act\n    sender.transfer(recipient, Money.of(30));\n\n    // Assert\n    assertEquals(Money.of(70), sender.getBalance());\n    assertEquals(Money.of(30), recipient.getBalance());\n}\n\n// INDEPENDENT: each test creates its own objects — no shared state\n// BAD: static field shared between tests\nstatic Account sharedAccount = new Account(\"alice\", Money.of(100));\n\n// REPEATABLE: avoid time-dependent tests\n// BAD:\nassertTrue(order.getCreatedAt().isAfter(LocalDateTime.now().minusSeconds(1)));\n// GOOD: inject a Clock\nClock clock = Clock.fixed(Instant.parse(\"2025-01-01T00:00:00Z\"), ZoneOffset.UTC);\nOrderService service = new OrderService(clock);\nassertEquals(\"2025-01-01\", service.place(order).getDate());",
+          "whyItMatters": "F.I.R.S.T. principles eliminate the most common test reliability problems: flaky tests (not Repeatable), order-dependent test suites (not Independent), and slow test feedback loops (not Fast). AAA makes tests readable as specification.",
+          "gotcha": "One logical assertion per test does not mean one assertEquals per test. assertAll is fine for related assertions. The rule is: one concept per test. A test that verifies both the return value AND a side effect is fine if they're part of the same logical outcome."
+        }
+      ]
+    },
+    {
+      "id": "tdd-integration",
+      "title": "TDD & Integration Testing",
+      "cards": [
+        {
+          "id": "testing-tdd-integration-tdd-cycle",
+          "topicId": "testing",
+          "subtopicId": "tdd-integration",
+          "title": "TDD Red-Green-Refactor",
+          "difficulty": "Mid",
+          "explanation": "Test-Driven Development: write a failing test (Red), write the minimum code to make it pass (Green), then refactor both code and test while staying Green. The discipline forces you to design the API before implementing it — the test is the first client. Triangulation: add a second failing test case to generalise from a hardcoded solution to a real implementation. The testing pyramid: many fast unit tests, fewer slower integration tests, very few slow end-to-end tests.",
+          "codeExample": "// TDD example: implementing FizzBuzz\n\n// Red: write failing test first\n@Test void returns_fizz_for_3() {\n    assertEquals(\"Fizz\", FizzBuzz.of(3)); // doesn't compile yet\n}\n\n// Green: minimum code to pass\nclass FizzBuzz {\n    static String of(int n) { return \"Fizz\"; } // hardcoded — just make it green\n}\n\n// Red: triangulate with a second test\n@Test void returns_buzz_for_5() {\n    assertEquals(\"Buzz\", FizzBuzz.of(5)); // fails — forces real implementation\n}\n\n// Green: generalise\nstatic String of(int n) {\n    if (n % 15 == 0) return \"FizzBuzz\";\n    if (n % 3  == 0) return \"Fizz\";\n    if (n % 5  == 0) return \"Buzz\";\n    return String.valueOf(n);\n}\n\n// Refactor: rename, extract constants — while tests stay green",
+          "whyItMatters": "TDD produces code that is testable by design (you can't write untestable code if the test comes first), provides instant feedback, and builds a regression suite automatically. The discipline is hard to maintain but the codebase quality payoff is significant.",
+          "gotcha": "TDD does not mean every line must be driven by a test. For exploratory spikes, write the code first to understand the problem, then delete it and TDD the real solution. TDD is most valuable for business logic, not boilerplate or infrastructure."
+        },
+        {
+          "id": "testing-tdd-integration-spring-integration",
+          "topicId": "testing",
+          "subtopicId": "tdd-integration",
+          "title": "Integration Testing with Spring Boot",
+          "difficulty": "Senior",
+          "explanation": "@SpringBootTest loads the full application context — use it for end-to-end integration tests. Test slices load only a layer: @WebMvcTest loads only the web layer (controllers, filters), @DataJpaTest loads only JPA (repositories, entities, in-memory H2 by default). @MockBean replaces a Spring bean with a Mockito mock in the context. Testcontainers starts real Docker containers (Postgres, Redis, Kafka) for realistic integration tests.",
+          "codeExample": "// Web layer test — no DB, no service impl needed\n@WebMvcTest(OrderController.class)\nclass OrderControllerTest {\n\n    @Autowired MockMvc mvc;\n    @MockBean  OrderService service; // real service replaced with mock\n\n    @Test\n    void getOrder_returns200() throws Exception {\n        when(service.findById(1L)).thenReturn(new Order(1L, \"item\"));\n\n        mvc.perform(get(\"/orders/1\"))\n           .andExpect(status().isOk())\n           .andExpect(jsonPath(\"$.id\").value(1));\n    }\n}\n\n// JPA layer test — real SQL, in-memory DB by default\n@DataJpaTest\nclass OrderRepositoryTest {\n    @Autowired OrderRepository repo;\n\n    @Test\n    void savedOrderIsRetrievable() {\n        Order saved = repo.save(new Order(null, \"item\"));\n        assertThat(repo.findById(saved.getId())).isPresent();\n    }\n}\n\n// Real Postgres via Testcontainers\n@SpringBootTest\n@Testcontainers\nclass OrderServiceIT {\n    @Container\n    static PostgreSQLContainer<?> pg = new PostgreSQLContainer<>(\"postgres:16\");\n\n    @DynamicPropertySource\n    static void props(DynamicPropertyRegistry r) {\n        r.add(\"spring.datasource.url\",      pg::getJdbcUrl);\n        r.add(\"spring.datasource.username\", pg::getUsername);\n        r.add(\"spring.datasource.password\", pg::getPassword);\n    }\n}",
+          "whyItMatters": "Test slices make integration tests fast by loading only what's needed. @WebMvcTest tests are ~10× faster than @SpringBootTest because they don't start a DB or full context. Testcontainers catch DB-specific bugs (constraints, query compatibility) that H2 in-memory tests miss.",
+          "gotcha": "@SpringBootTest starts the full application context, which is slow (~3–10s). Share the context across tests with @DirtiesContext(classMode=AFTER_CLASS) only when necessary, and prefer test slices for most tests to keep the suite fast."
+        }
+      ]
+    }
+  ]
+}

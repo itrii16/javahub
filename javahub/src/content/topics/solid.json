@@ -1,0 +1,75 @@
+{
+  "id": "solid",
+  "title": "SOLID Principles",
+  "group": "Engineering Principles",
+  "estimatedMinutes": 60,
+  "subtopics": [
+    {
+      "id": "srp-ocp-lsp",
+      "title": "SRP, OCP & LSP",
+      "cards": [
+        {
+          "id": "solid-srp-ocp-lsp-srp",
+          "topicId": "solid",
+          "subtopicId": "srp-ocp-lsp",
+          "title": "Single Responsibility Principle",
+          "difficulty": "Beginner",
+          "explanation": "A class should have exactly one reason to change — meaning it should own one clearly bounded piece of behaviour. 'Reason to change' maps to a stakeholder: the finance team changes billing logic, the ops team changes email delivery. When both live in the same class, a change for one stakeholder risks breaking the other. SRP is about cohesion: things that change together belong together; things that change for different reasons belong apart.",
+          "codeExample": "// Violation: UserService handles auth, email AND persistence\nclass UserService {\n    public void register(User user) {\n        validate(user);\n        db.save(user);          // persistence concern\n        emailService.send(user); // notification concern\n        auditLog.record(user);  // auditing concern\n    }\n}\n\n// After SRP — each class has one reason to change\nclass UserRepository {\n    public void save(User user) { db.save(user); }\n}\n\nclass UserNotifier {\n    public void sendWelcome(User user) { emailService.send(user); }\n}\n\nclass RegistrationService {\n    public void register(User user) {\n        validate(user);\n        userRepository.save(user);\n        userNotifier.sendWelcome(user);\n    }\n}",
+          "whyItMatters": "Classes with a single responsibility are smaller, easier to test (no need to mock unrelated collaborators), and less likely to suffer from merge conflicts when different features evolve independently.",
+          "gotcha": "SRP does not mean 'one method per class'. It means one cohesive reason to change. Over-splitting into dozens of tiny classes creates fragmentation that's just as hard to maintain. Use judgement — group things that always change together."
+        },
+        {
+          "id": "solid-srp-ocp-lsp-ocp",
+          "topicId": "solid",
+          "subtopicId": "srp-ocp-lsp",
+          "title": "Open/Closed Principle",
+          "difficulty": "Mid",
+          "explanation": "Software entities should be open for extension but closed for modification. Once a class is tested and in production, adding new behaviour should not require editing its source code — it should come from adding new code (new subclasses, new implementations). The canonical enabler is the Strategy pattern: extracting an algorithm behind an interface so new algorithms can be plugged in without touching the host class.",
+          "codeExample": "// Violation: adding a new payment type requires editing existing class\nclass PaymentProcessor {\n    public void process(Payment p) {\n        if (p.type == CREDIT_CARD) { chargeCard(p); }\n        else if (p.type == PAYPAL)  { chargePaypal(p); } // edit every time\n        else if (p.type == CRYPTO)  { chargeCrypto(p); } // keeps growing\n    }\n}\n\n// OCP via Strategy — closed for modification, open for extension\ninterface PaymentStrategy {\n    void charge(Payment payment);\n}\n\nclass CreditCardStrategy implements PaymentStrategy {\n    public void charge(Payment p) { chargeCard(p); }\n}\n\nclass CryptoStrategy implements PaymentStrategy {\n    public void charge(Payment p) { chargeCrypto(p); }\n}\n\nclass PaymentProcessor {\n    private final PaymentStrategy strategy;\n    // Add new payment type: implement PaymentStrategy, inject it. Done.\n    public void process(Payment p) { strategy.charge(p); }\n}",
+          "whyItMatters": "In production systems, the riskiest operation is modifying existing, tested code. OCP limits the blast radius of new feature additions — new code is always easier to reason about and test than changed code.",
+          "gotcha": "OCP does not mean never modify code. It means design hotspots — places you know will change — to be extensible. Applying OCP everywhere produces over-engineered abstraction. Apply it where the direction of change is predictable."
+        },
+        {
+          "id": "solid-srp-ocp-lsp-lsp",
+          "topicId": "solid",
+          "subtopicId": "srp-ocp-lsp",
+          "title": "Liskov Substitution Principle",
+          "difficulty": "Mid",
+          "explanation": "Subtypes must be substitutable for their base types without altering the correctness of the program. An object of type S can replace an object of type T if S is a subtype of T, and doing so does not break the program's expected behaviour. LSP goes beyond 'is-a' in natural language — it demands that the subtype honour the supertype's contract: preconditions can only be weakened, postconditions can only be strengthened, and invariants must be preserved.",
+          "codeExample": "// Classic LSP violation: Rectangle / Square\nclass Rectangle {\n    int width, height;\n    void setWidth(int w)  { this.width = w; }\n    void setHeight(int h) { this.height = h; }\n    int area() { return width * height; }\n}\n\nclass Square extends Rectangle {\n    @Override void setWidth(int w)  { width = height = w; } // breaks contract!\n    @Override void setHeight(int h) { width = height = h; }\n}\n\n// This breaks with a Square:\nvoid resize(Rectangle r) {\n    r.setWidth(5); r.setHeight(3);\n    assert r.area() == 15; // FAILS for Square — area is 9\n}\n\n// Fix: don't inherit when the subtype can't honour the supertype's contract\ninterface Shape { int area(); }\nrecord ImmutableRectangle(int width, int height) implements Shape {\n    public int area() { return width * height; }\n}\nrecord ImmutableSquare(int side) implements Shape {\n    public int area() { return side * side; }\n}",
+          "whyItMatters": "LSP violations cause bugs that only appear at runtime when a concrete subtype is used. They make polymorphism untrustworthy — callers must check the actual type before using it, defeating the purpose of inheritance.",
+          "gotcha": "Throwing UnsupportedOperationException in a subtype method (like AbstractList.set() on an unmodifiable list) is a common LSP violation in the JDK itself. It's a pragmatic trade-off but demonstrates that 'is-a' in code and 'is-a' in contracts are different things."
+        }
+      ]
+    },
+    {
+      "id": "isp-dip",
+      "title": "ISP & DIP",
+      "cards": [
+        {
+          "id": "solid-isp-dip-isp",
+          "topicId": "solid",
+          "subtopicId": "isp-dip",
+          "title": "Interface Segregation Principle",
+          "difficulty": "Mid",
+          "explanation": "Clients should not be forced to depend on interfaces they do not use. A fat interface that bundles unrelated methods forces implementing classes to provide stub implementations for methods they don't support, and forces clients to import methods they don't need. Split fat interfaces into focused role interfaces — each describing one capability. Java's own standard library follows this: Readable, Writable, Closeable are separate interfaces rather than one monolithic Stream contract.",
+          "codeExample": "// Fat interface — ISP violation\ninterface Worker {\n    void work();\n    void eat();   // robots don't eat!\n    void sleep();  // robots don't sleep!\n}\n\nclass Robot implements Worker {\n    public void work() { /* real impl */ }\n    public void eat()  { throw new UnsupportedOperationException(); } // forced stub\n    public void sleep(){ throw new UnsupportedOperationException(); }\n}\n\n// After ISP — role interfaces\ninterface Workable  { void work(); }\ninterface Feedable  { void eat(); }\ninterface Restable  { void sleep(); }\n\nclass HumanWorker implements Workable, Feedable, Restable {\n    public void work()  { /* ... */ }\n    public void eat()   { /* ... */ }\n    public void sleep() { /* ... */ }\n}\n\nclass Robot implements Workable {\n    public void work() { /* ... */ } // only what it needs\n}",
+          "whyItMatters": "Role interfaces make code more testable (mocks only need to implement the relevant interface), more readable (method count is low and focused), and more resilient to change (adding a method to one interface doesn't break all implementors).",
+          "gotcha": "Java 8 default methods offer an escape hatch: you can add a method to an interface without breaking all implementors by providing a default implementation. Use this for backwards-compatible API evolution, not as a reason to skip ISP in new designs."
+        },
+        {
+          "id": "solid-isp-dip-dip",
+          "topicId": "solid",
+          "subtopicId": "isp-dip",
+          "title": "Dependency Inversion Principle",
+          "difficulty": "Mid",
+          "explanation": "High-level modules should not depend on low-level modules; both should depend on abstractions. Abstractions should not depend on details; details should depend on abstractions. In practice: define an interface in the high-level module, let low-level modules implement it. The high-level module never imports the concrete class. Spring's IoC container automates this — it instantiates and injects the correct implementation at runtime.",
+          "codeExample": "// Violation: high-level OrderService depends on low-level MySQLOrderRepo\nclass OrderService {\n    private MySQLOrderRepository repo = new MySQLOrderRepository(); // hard dependency\n    public void place(Order o) { repo.save(o); }\n}\n\n// DIP: both depend on the abstraction\ninterface OrderRepository {    // abstraction — owned by the domain layer\n    void save(Order order);\n    Optional<Order> findById(long id);\n}\n\nclass OrderService {           // high-level module\n    private final OrderRepository repo; // depends on interface\n    public OrderService(OrderRepository repo) { this.repo = repo; } // injected\n    public void place(Order o) { repo.save(o); }\n}\n\nclass MySQLOrderRepository implements OrderRepository { /* low-level detail */ }\nclass InMemoryOrderRepository implements OrderRepository { /* for tests */ }\n\n// Spring wires it:\n@Service public class OrderService {\n    public OrderService(@Autowired OrderRepository repo) { ... }\n}",
+          "whyItMatters": "DIP enables swapping implementations without touching business logic — swap the real DB with an in-memory fake for tests, or swap MySQL for Postgres in production. It's the foundation of testable, maintainable architecture.",
+          "gotcha": "DIP is about compile-time dependency direction, not just runtime injection. Even with Spring, if OrderService imports MySQLOrderRepository anywhere, the principle is violated. The import list of a class reveals its true dependencies."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "id": "design-patterns",
+  "title": "Design Patterns",
+  "group": "Engineering Principles",
+  "estimatedMinutes": 90,
+  "subtopics": [
+    {
+      "id": "creational",
+      "title": "Creational Patterns",
+      "cards": [
+        {
+          "id": "design-patterns-creational-singleton",
+          "topicId": "design-patterns",
+          "subtopicId": "creational",
+          "title": "Singleton",
+          "difficulty": "Beginner",
+          "explanation": "Singleton ensures a class has exactly one instance and provides a global access point to it. The simplest safe implementation in Java is the enum singleton — the JVM guarantees exactly one instance per enum constant, handles serialization correctly, and prevents reflection attacks. Double-checked locking with volatile is the classic thread-safe lazy-init approach. In Spring, @Bean (or @Component) default scope is singleton — the container manages the lifecycle, making manual singletons rare in modern Java.",
+          "codeExample": "// Best: enum singleton — JVM guarantees single instance\npublic enum DatabaseConnection {\n    INSTANCE;\n    private final Connection conn = createConnection();\n    public Connection get() { return conn; }\n}\n// Usage: DatabaseConnection.INSTANCE.get()\n\n// Classic: double-checked locking (needs volatile)\npublic class Config {\n    private static volatile Config instance;\n    private Config() {}\n    public static Config getInstance() {\n        if (instance == null) {\n            synchronized (Config.class) {\n                if (instance == null)\n                    instance = new Config(); // volatile prevents partial construction\n            }\n        }\n        return instance;\n    }\n}\n\n// Simplest lazy: initialization-on-demand holder\npublic class Config {\n    private Config() {}\n    private static class Holder { static final Config INSTANCE = new Config(); }\n    public static Config getInstance() { return Holder.INSTANCE; }\n}",
+          "whyItMatters": "Singletons manage shared resources (DB connections, config, caches) that are expensive to create and should be reused. Understanding the thread-safety pitfalls is essential for senior interviews — and for diagnosing subtle production concurrency bugs.",
+          "gotcha": "Singletons are hard to test because they introduce global shared state. Code that uses a singleton directly is impossible to unit test in isolation. Prefer injecting the singleton via a constructor parameter so tests can pass a mock or a different implementation."
+        },
+        {
+          "id": "design-patterns-creational-builder",
+          "topicId": "design-patterns",
+          "subtopicId": "creational",
+          "title": "Builder",
+          "difficulty": "Mid",
+          "explanation": "Builder solves the telescoping constructor problem: when a class has many optional parameters, constructors multiply combinatorially. The Builder pattern separates construction from representation — a fluent inner Builder class accumulates parameters and produces the final immutable object via build(). This makes object creation readable (named parameters), safe (validates before building), and produces immutable objects (no setters needed).",
+          "codeExample": "// Telescoping constructor problem\nnew HttpRequest(url, \"GET\", null, null, 30, true); // what do params mean?\n\n// Builder solution\npublic class HttpRequest {\n    private final String url;\n    private final String method;\n    private final Map<String,String> headers;\n    private final int timeoutMs;\n\n    private HttpRequest(Builder b) {\n        this.url = Objects.requireNonNull(b.url);\n        this.method = b.method;\n        this.headers = Map.copyOf(b.headers);\n        this.timeoutMs = b.timeoutMs;\n    }\n\n    public static class Builder {\n        private final String url;      // required\n        private String method = \"GET\";\n        private Map<String,String> headers = new HashMap<>();\n        private int timeoutMs = 5000;\n\n        public Builder(String url) { this.url = url; }\n        public Builder method(String m) { this.method = m; return this; }\n        public Builder header(String k, String v) { headers.put(k,v); return this; }\n        public Builder timeout(int ms) { this.timeoutMs = ms; return this; }\n        public HttpRequest build() { return new HttpRequest(this); }\n    }\n}\n\n// Usage — readable and self-documenting\nHttpRequest req = new HttpRequest.Builder(\"https://api.example.com/users\")\n    .method(\"POST\")\n    .header(\"Authorization\", \"Bearer \" + token)\n    .timeout(10_000)\n    .build();",
+          "whyItMatters": "Builder is ubiquitous in Java APIs: StringBuilder, Lombok @Builder, Spring's MockMvc, Retrofit, etc. Understanding the pattern lets you implement it from scratch and use it effectively in domain objects where immutability matters.",
+          "gotcha": "Lombok's @Builder generates a Builder with all fields optional, which can hide required fields. For required fields, use @Builder with @NonNull on required fields, or expose them through the Builder constructor."
+        },
+        {
+          "id": "design-patterns-creational-factory",
+          "topicId": "design-patterns",
+          "subtopicId": "creational",
+          "title": "Factory Method & Static Factory",
+          "difficulty": "Mid",
+          "explanation": "Factory Method defines an interface for creating an object but lets subclasses decide which class to instantiate. The 'virtual constructor' lets a framework call an abstract creation method that subclasses override. Static factory methods (the item-1 pattern from Effective Java) are an alternative to constructors: they have names (Optional.of, Optional.empty), can return cached instances, and can return subtypes. They are not the GoF Factory Method pattern but are far more common in day-to-day Java.",
+          "codeExample": "// GoF Factory Method — subclass decides the product\nabstract class Dialog {\n    public void render() {\n        Button btn = createButton();  // factory method\n        btn.onClick(() -> save());\n        btn.render();\n    }\n    protected abstract Button createButton(); // subclasses decide\n}\n\nclass WebDialog extends Dialog {\n    protected Button createButton() { return new HtmlButton(); }\n}\nclass WindowsDialog extends Dialog {\n    protected Button createButton() { return new WindowsButton(); }\n}\n\n// Static factory methods (Effective Java Item 1) — more common\npublic class Money {\n    private final long cents;\n    private Money(long cents) { this.cents = cents; }\n\n    public static Money ofCents(long cents) { return new Money(cents); }  // named\n    public static Money ofDollars(double dollars) {                        // named\n        return new Money(Math.round(dollars * 100));\n    }\n    public static Money zero() { return ZERO; }  // can return cached instance\n    private static final Money ZERO = new Money(0);\n}",
+          "whyItMatters": "Static factory methods are the preferred way to instantiate objects in modern Java (see List.of, Map.of, Optional.of, Instant.now). They hide implementation details, enable caching, and produce more readable call sites than constructors.",
+          "gotcha": "Static factory methods are not discoverable through Javadoc the way constructors are — they don't appear under 'Constructor Summary'. Use consistent naming conventions (of, from, valueOf, getInstance, create, newInstance) so callers know where to look."
+        }
+      ]
+    },
+    {
+      "id": "structural-behavioral",
+      "title": "Structural & Behavioral Patterns",
+      "cards": [
+        {
+          "id": "design-patterns-structural-behavioral-strategy",
+          "topicId": "design-patterns",
+          "subtopicId": "structural-behavioral",
+          "title": "Strategy",
+          "difficulty": "Beginner",
+          "explanation": "Strategy defines a family of algorithms, encapsulates each one, and makes them interchangeable. The context class holds a reference to a Strategy interface and delegates the algorithm to it. This eliminates if/switch statements on type and enables adding new algorithms without modifying the context (OCP). In modern Java, lambdas are strategies — any single-method interface can be implemented inline as a lambda.",
+          "codeExample": "// Without Strategy: grows with every new sort algorithm\nclass Sorter {\n    void sort(int[] arr, String algorithm) {\n        if (algorithm.equals(\"bubble\"))     bubbleSort(arr);\n        else if (algorithm.equals(\"quick\")) quickSort(arr);\n        // add new algorithm = edit this class\n    }\n}\n\n// With Strategy\n@FunctionalInterface\ninterface SortStrategy {\n    void sort(int[] array);\n}\n\nclass Sorter {\n    private SortStrategy strategy;\n    public Sorter(SortStrategy strategy) { this.strategy = strategy; }\n    public void sort(int[] arr) { strategy.sort(arr); }\n}\n\n// Concrete strategies\nSorter s1 = new Sorter(arr -> Arrays.sort(arr));        // lambda strategy\nSorter s2 = new Sorter(new QuickSortStrategy());         // class strategy\n\n// Java's own strategy: Comparator\nList<String> names = new ArrayList<>(List.of(\"Charlie\", \"Alice\", \"Bob\"));\nnames.sort(Comparator.naturalOrder());                   // strategy = natural order\nnames.sort(Comparator.comparingInt(String::length));     // strategy = by length",
+          "whyItMatters": "Strategy is one of the most practical patterns. Anywhere you see a flag parameter, a switch on type, or an algorithm that might change, Strategy is the refactoring target. Java's Comparator, ExecutorService, and Spring's HandlerMethodArgumentResolver are all Strategy implementations.",
+          "gotcha": "Don't use Strategy when there's only one algorithm and no reasonable expectation of needing more. Premature abstraction adds complexity without benefit. The smell that signals Strategy time is a growing if/else or switch on an algorithm-type discriminator."
+        },
+        {
+          "id": "design-patterns-structural-behavioral-observer",
+          "topicId": "design-patterns",
+          "subtopicId": "structural-behavioral",
+          "title": "Observer",
+          "difficulty": "Mid",
+          "explanation": "Observer defines a one-to-many dependency so that when one object (Subject/Publisher) changes state, all its dependents (Observers/Subscribers) are notified automatically. This decouples producers from consumers — the subject doesn't know who is listening, listeners don't need to poll. Java's event listener model (ActionListener, PropertyChangeListener) and Spring's ApplicationEvent system are Observer implementations.",
+          "codeExample": "// Classic Observer\ninterface EventListener<T> {\n    void onEvent(T event);\n}\n\nclass EventBus<T> {\n    private final List<EventListener<T>> listeners = new CopyOnWriteArrayList<>();\n\n    public void subscribe(EventListener<T> listener)  { listeners.add(listener); }\n    public void unsubscribe(EventListener<T> listener) { listeners.remove(listener); }\n    public void publish(T event) {\n        listeners.forEach(l -> l.onEvent(event));\n    }\n}\n\n// Usage\nEventBus<OrderPlacedEvent> bus = new EventBus<>();\nbus.subscribe(event -> inventory.reserve(event.getOrderId()));\nbus.subscribe(event -> notifier.sendConfirmation(event.getEmail()));\nbus.publish(new OrderPlacedEvent(orderId, customerEmail));\n\n// Spring equivalent\n@Component\npublic class InventoryListener {\n    @EventListener\n    public void onOrderPlaced(OrderPlacedEvent event) {\n        inventory.reserve(event.getOrderId());\n    }\n}",
+          "whyItMatters": "Observer is the foundation of event-driven architectures. Understanding it explains how UI frameworks, Spring events, reactive streams (Flux/Mono), and message queues (Kafka consumers) all work at their core.",
+          "gotcha": "Strong references to listeners cause memory leaks if listeners are never unsubscribed. Classic example: a short-lived dialog registers as a listener on a long-lived service, preventing GC of the dialog. Use WeakReference listeners or ensure explicit unsubscription."
+        },
+        {
+          "id": "design-patterns-structural-behavioral-decorator",
+          "topicId": "design-patterns",
+          "subtopicId": "structural-behavioral",
+          "title": "Decorator",
+          "difficulty": "Mid",
+          "explanation": "Decorator attaches additional responsibilities to an object dynamically by wrapping it in another object that implements the same interface. Unlike inheritance, decorators can be combined at runtime and don't require subclassing for every combination. Java's I/O stream classes are the canonical example: BufferedInputStream wraps FileInputStream, GZIPInputStream wraps BufferedInputStream — each adding a behaviour to the stream below it.",
+          "codeExample": "// Java I/O is built on Decorator\nInputStream raw      = new FileInputStream(\"data.gz\");\nInputStream buffered = new BufferedInputStream(raw);     // adds buffering\nInputStream gunzip   = new GZIPInputStream(buffered);    // adds decompression\n// Each layer adds behaviour without knowing about the others\n\n// Custom Decorator: add logging to any repository\ninterface UserRepository {\n    User findById(long id);\n    void save(User user);\n}\n\nclass LoggingUserRepository implements UserRepository {\n    private final UserRepository delegate;\n    private final Logger log = LoggerFactory.getLogger(getClass());\n\n    public LoggingUserRepository(UserRepository delegate) {\n        this.delegate = delegate;\n    }\n\n    public User findById(long id) {\n        log.info(\"findById({})\", id);\n        User u = delegate.findById(id);\n        log.info(\"found: {}\", u);\n        return u;\n    }\n\n    public void save(User user) {\n        log.info(\"saving {}\", user);\n        delegate.save(user);\n    }\n}",
+          "whyItMatters": "Decorator enables cross-cutting concerns (logging, caching, retry, metrics) to be added to any implementation without modifying it. Spring AOP (@Cacheable, @Transactional, @Retryable) uses dynamic proxy — a runtime-generated Decorator — to achieve this transparently.",
+          "gotcha": "When decorators are stacked several layers deep, debugging can be confusing because the call stack shows multiple wrapper classes before reaching the real implementation. Log at each layer or use a debugger breakpoint on the innermost implementation."
+        }
+      ]
+    }
+  ]
+}
