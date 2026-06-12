@@ -1,0 +1,114 @@
+{
+  "id": "algorithms",
+  "title": "Algorithms in Java",
+  "group": "Interview & System Design",
+  "estimatedMinutes": 90,
+  "subtopics": [
+    {
+      "id": "complexity-recursion",
+      "title": "Complexity & Recursion",
+      "cards": [
+        {
+          "id": "algorithms-complexity-recursion-big-o",
+          "topicId": "algorithms",
+          "subtopicId": "complexity-recursion",
+          "title": "Big-O Analysis",
+          "difficulty": "Beginner",
+          "explanation": "Big-O describes the upper bound on how runtime or space grows as input size n grows. Common classes in order: O(1) constant, O(log n) logarithmic (binary search), O(n) linear (single pass), O(n log n) linearithmic (merge sort), O(n²) quadratic (nested loops), O(2ⁿ) exponential (subsets). Rules: drop constants (O(3n) → O(n)), drop non-dominant terms (O(n² + n) → O(n²)), and analyse the worst case unless stated otherwise. Amortized analysis averages cost over a sequence — ArrayList.add() is O(n) occasionally but O(1) amortized.",
+          "codeExample": "// O(1) — constant, regardless of input size\nint getFirst(int[] arr) { return arr[0]; }\n\n// O(log n) — halves the search space each step\nint binarySearch(int[] arr, int target) {\n    int lo = 0, hi = arr.length - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (arr[mid] == target) return mid;\n        if (arr[mid] < target)  lo = mid + 1;\n        else                    hi = mid - 1;\n    }\n    return -1;\n}\n\n// O(n) — single pass\nint sum(int[] arr) {\n    int s = 0;\n    for (int x : arr) s += x;\n    return s;\n}\n\n// O(n²) — nested loops over same input\nbool hasDuplicate(int[] arr) {\n    for (int i = 0; i < arr.length; i++)\n        for (int j = i + 1; j < arr.length; j++)\n            if (arr[i] == arr[j]) return true;\n    return false;\n}\n// O(n) alternative: add to HashSet, check contains\n\n// Amortized O(1): ArrayList.add()\n// Appending copies array when capacity is exceeded (O(n) resize)\n// but resizing doubles capacity, so the cost is amortized O(1) per add",
+          "whyItMatters": "Big-O is the language of algorithm interviews and code review discussions. Every data structure and algorithm choice has a complexity implication — knowing them lets you predict whether code will be fast at 1,000 rows vs 1,000,000 rows.",
+          "gotcha": "O(n log n) is NOT between O(n) and O(n²) for small n. For n=10, O(n²)=100 and O(n log n)≈33. The asymptotic ordering holds for large n, but for small datasets a simpler O(n²) algorithm with lower constant factors may actually run faster than an O(n log n) one."
+        },
+        {
+          "id": "algorithms-complexity-recursion-recursion",
+          "topicId": "algorithms",
+          "subtopicId": "complexity-recursion",
+          "title": "Recursion & the Call Stack",
+          "difficulty": "Mid",
+          "explanation": "Every recursive call adds a frame to the call stack (local variables + return address). A recursive function MUST have a base case (terminates recursion) and a recursive case (calls itself with a smaller subproblem). Java does not perform tail-call optimisation, so deep recursion causes StackOverflowError. The maximum depth is roughly 500–1000 frames by default (configurable with -Xss). When depth is a concern, convert recursion to iteration using an explicit stack.",
+          "codeExample": "// Classic: factorial (O(n) time, O(n) space — call stack depth = n)\nlong factorial(int n) {\n    if (n <= 1) return 1;           // base case\n    return n * factorial(n - 1);   // recursive case\n}\n\n// Tree DFS — natural recursive structure\nint depth(TreeNode root) {\n    if (root == null) return 0;    // base case\n    return 1 + Math.max(depth(root.left), depth(root.right));\n}\n\n// Convert to iterative when depth is large\nint depthIterative(TreeNode root) {\n    if (root == null) return 0;\n    Deque<TreeNode> stack = new ArrayDeque<>();\n    Deque<Integer> depths = new ArrayDeque<>();\n    stack.push(root); depths.push(1);\n    int maxDepth = 0;\n    while (!stack.isEmpty()) {\n        TreeNode node = stack.pop();\n        int d = depths.pop();\n        maxDepth = Math.max(maxDepth, d);\n        if (node.left  != null) { stack.push(node.left);  depths.push(d + 1); }\n        if (node.right != null) { stack.push(node.right); depths.push(d + 1); }\n    }\n    return maxDepth;\n}\n// Same result, no StackOverflowError for deep trees",
+          "whyItMatters": "Recursion is the natural solution for tree/graph traversal, divide-and-conquer, and backtracking. Knowing when to convert to iterative (deep input, performance-critical) distinguishes senior from junior implementations.",
+          "gotcha": "Java's Integer.MAX_VALUE is 2,147,483,647. Recursive calls on input of that size will StackOverflow long before completing. Always consider the maximum expected input depth and switch to an explicit stack for production tree/graph algorithms on unbounded input."
+        },
+        {
+          "id": "algorithms-complexity-recursion-dp",
+          "topicId": "algorithms",
+          "subtopicId": "complexity-recursion",
+          "title": "Memoization & Dynamic Programming",
+          "difficulty": "Mid",
+          "explanation": "Dynamic Programming (DP) solves problems by breaking them into overlapping subproblems and storing results to avoid recomputation. Recognise DP candidates: optimal substructure (optimal solution built from optimal sub-solutions) + overlapping subproblems (same subproblem computed repeatedly). Top-down (memoization): recursive + HashMap cache. Bottom-up (tabulation): iterative, fill a table from base cases up. Bottom-up usually has lower overhead (no call stack, no HashMap).",
+          "codeExample": "// Fibonacci: naive O(2^n) — exponential due to repeated subproblems\nint fib(int n) {\n    if (n <= 1) return n;\n    return fib(n-1) + fib(n-2); // fib(5) recomputes fib(3) twice, fib(2) thrice...\n}\n\n// Top-down memoization: O(n) time, O(n) space\nMap<Integer, Integer> memo = new HashMap<>();\nint fibMemo(int n) {\n    if (n <= 1) return n;\n    if (memo.containsKey(n)) return memo.get(n);\n    int result = fibMemo(n-1) + fibMemo(n-2);\n    memo.put(n, result);\n    return result;\n}\n\n// Bottom-up tabulation: O(n) time, O(1) space\nint fibDP(int n) {\n    if (n <= 1) return n;\n    int prev2 = 0, prev1 = 1;\n    for (int i = 2; i <= n; i++) {\n        int curr = prev1 + prev2;\n        prev2 = prev1;\n        prev1 = curr;\n    }\n    return prev1;\n}\n\n// Coin change (classic DP)\nint coinChange(int[] coins, int amount) {\n    int[] dp = new int[amount + 1];\n    Arrays.fill(dp, amount + 1);  // fill with 'infinity'\n    dp[0] = 0;\n    for (int a = 1; a <= amount; a++)\n        for (int coin : coins)\n            if (coin <= a) dp[a] = Math.min(dp[a], dp[a - coin] + 1);\n    return dp[amount] > amount ? -1 : dp[amount];\n}",
+          "whyItMatters": "DP transforms exponential-time recursive solutions into polynomial-time ones. Coin change, knapsack, longest common subsequence, and edit distance are canonical interview problems that appear in real codebases (spell checkers, diff tools, scheduling).",
+          "gotcha": "Not every recursive problem is DP. DP requires overlapping subproblems. Merge sort is divide-and-conquer (disjoint subproblems) — memoizing it wastes memory. Check: does the same subproblem appear multiple times in the recursion tree? If yes, DP. If no, divide-and-conquer."
+        }
+      ]
+    },
+    {
+      "id": "sorting-searching",
+      "title": "Sorting, Searching & Patterns",
+      "cards": [
+        {
+          "id": "algorithms-sorting-searching-java-sort",
+          "topicId": "algorithms",
+          "subtopicId": "sorting-searching",
+          "title": "Java Sorting Internals",
+          "difficulty": "Beginner",
+          "explanation": "Arrays.sort() uses dual-pivot quicksort for primitive arrays (O(n log n) average, in-place, not stable) and TimSort for Object arrays (O(n log n) worst, O(n) best on nearly-sorted data, stable, extra memory). Collections.sort() delegates to List.sort() which also uses TimSort — so it's always stable. Stability means equal elements preserve their relative input order. Custom ordering: implement Comparable on the class, or pass a Comparator. Java 8+ Comparator.comparing chain is the cleanest approach.",
+          "codeExample": "// Arrays.sort — primitives use dual-pivot quicksort (unstable)\nint[] nums = {5, 2, 8, 1, 9};\nArrays.sort(nums);              // [1, 2, 5, 8, 9]\nArrays.sort(nums, 1, 4);        // sort subarray [1..3] only\n\n// Arrays.sort — objects use TimSort (stable)\nString[] words = {\"banana\", \"apple\", \"cherry\"};\nArrays.sort(words);             // [apple, banana, cherry] natural order\nArrays.sort(words, Comparator.comparingInt(String::length)); // by length\n\n// Comparator chaining (Java 8+)\nList<Employee> staff = new ArrayList<>(employees);\nstaff.sort(\n    Comparator.comparing(Employee::getDepartment)\n              .thenComparingInt(Employee::getSalary)\n              .reversed()\n);\n\n// Comparable: natural ordering on the class itself\nclass Version implements Comparable<Version> {\n    int major, minor;\n    @Override\n    public int compareTo(Version other) {\n        int c = Integer.compare(this.major, other.major);\n        return c != 0 ? c : Integer.compare(this.minor, other.minor);\n    }\n}",
+          "whyItMatters": "Choosing the wrong sort algorithm (e.g. manually implementing bubble sort when Arrays.sort exists) is a common interview mistake. Knowing that Objects use stable TimSort while primitives use unstable quicksort explains why sorting a List<Integer> can behave differently from sorting an int[].",
+          "gotcha": "Comparator must be consistent with equals for sorted collections (TreeSet, TreeMap). If compareTo returns 0 for two objects but equals returns false, TreeSet treats them as duplicates and discards one. Always ensure Comparator.compare(a,b)==0 iff a.equals(b) when using sorted sets/maps."
+        },
+        {
+          "id": "algorithms-sorting-searching-binary-search",
+          "topicId": "algorithms",
+          "subtopicId": "sorting-searching",
+          "title": "Binary Search Variants",
+          "difficulty": "Mid",
+          "explanation": "Standard binary search finds one occurrence of a target in O(log n). Variants: find the leftmost occurrence (first position where arr[i] >= target — lower bound), find the rightmost occurrence (last position where arr[i] <= target — upper bound). The classic off-by-one error: using hi = mid instead of hi = mid - 1 (or lo = mid instead of lo = mid + 1) causes infinite loops. The safe midpoint formula is lo + (hi - lo) / 2 (avoids integer overflow of (lo + hi) / 2).",
+          "codeExample": "// Standard binary search\nint search(int[] arr, int target) {\n    int lo = 0, hi = arr.length - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if      (arr[mid] == target) return mid;\n        else if (arr[mid] <  target) lo = mid + 1;\n        else                         hi = mid - 1;\n    }\n    return -1;\n}\n\n// Lower bound: first index where arr[i] >= target\nint lowerBound(int[] arr, int target) {\n    int lo = 0, hi = arr.length; // hi = length (exclusive)\n    while (lo < hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (arr[mid] < target) lo = mid + 1;\n        else                   hi = mid;     // not mid-1 !\n    }\n    return lo; // lo == hi: insertion point\n}\n\n// Search in rotated sorted array [4,5,6,7,0,1,2], target=0\nint searchRotated(int[] arr, int target) {\n    int lo = 0, hi = arr.length - 1;\n    while (lo <= hi) {\n        int mid = lo + (hi - lo) / 2;\n        if (arr[mid] == target) return mid;\n        if (arr[lo] <= arr[mid]) { // left half sorted\n            if (arr[lo] <= target && target < arr[mid]) hi = mid - 1;\n            else lo = mid + 1;\n        } else {                   // right half sorted\n            if (arr[mid] < target && target <= arr[hi]) lo = mid + 1;\n            else hi = mid - 1;\n        }\n    }\n    return -1;\n}",
+          "whyItMatters": "Binary search is not just for sorted arrays — it applies to any monotonic function: find the minimum capacity that satisfies a constraint, the first day a condition holds, the boundary between valid and invalid states. Recognising this pattern unlocks a large family of problems.",
+          "gotcha": "Arrays.binarySearch() returns a negative value (-(insertion point) - 1) when the target is not found, not -1. Many developers expect -1 and break on not-found cases. Always read the javadoc return value contract before using library search functions."
+        },
+        {
+          "id": "algorithms-sorting-searching-sliding-window",
+          "topicId": "algorithms",
+          "subtopicId": "sorting-searching",
+          "title": "Sliding Window & Two Pointers",
+          "difficulty": "Mid",
+          "explanation": "Sliding window maintains a range [left, right] over a sequence, expanding the right pointer to grow the window and shrinking the left pointer when a condition is violated. Fixed window: sum/average of k elements in O(n). Variable window: longest substring without repeating characters. Two pointers approach: start pointers at both ends and converge — classic for sorted-array pair sums, removing duplicates in-place, or detecting palindromes.",
+          "codeExample": "// Fixed window: max sum of k consecutive elements — O(n)\nint maxSum(int[] arr, int k) {\n    int windowSum = 0;\n    for (int i = 0; i < k; i++) windowSum += arr[i];\n    int maxSum = windowSum;\n    for (int i = k; i < arr.length; i++) {\n        windowSum += arr[i] - arr[i - k]; // slide: add new, remove old\n        maxSum = Math.max(maxSum, windowSum);\n    }\n    return maxSum;\n}\n\n// Variable window: longest substring without repeating chars — O(n)\nint lengthOfLongestSubstring(String s) {\n    Map<Character, Integer> lastSeen = new HashMap<>();\n    int maxLen = 0, left = 0;\n    for (int right = 0; right < s.length(); right++) {\n        char c = s.charAt(right);\n        if (lastSeen.containsKey(c) && lastSeen.get(c) >= left) {\n            left = lastSeen.get(c) + 1; // shrink window past duplicate\n        }\n        lastSeen.put(c, right);\n        maxLen = Math.max(maxLen, right - left + 1);\n    }\n    return maxLen;\n}\n\n// Two pointers: two-sum in sorted array — O(n)\nint[] twoSum(int[] numbers, int target) {\n    int left = 0, right = numbers.length - 1;\n    while (left < right) {\n        int sum = numbers[left] + numbers[right];\n        if      (sum == target) return new int[]{left+1, right+1};\n        else if (sum <  target) left++;\n        else                    right--;\n    }\n    return new int[]{-1, -1};\n}",
+          "whyItMatters": "Sliding window and two pointers transform O(n²) brute-force solutions into O(n) linear ones. They appear in a huge fraction of array/string interview problems. Recognising the pattern — 'I need a contiguous subarray satisfying some condition' — is the key skill.",
+          "gotcha": "Sliding window only works when the problem has optimal substructure within a contiguous range. It does not apply when elements can be reordered or selected non-contiguously. Always verify that shrinking the window from the left is valid — i.e., removing elements from the left monotonically moves toward the constraint boundary."
+        }
+      ]
+    },
+    {
+      "id": "patterns",
+      "title": "Graph Algorithms & Backtracking",
+      "cards": [
+        {
+          "id": "algorithms-patterns-graph-algorithms",
+          "topicId": "algorithms",
+          "subtopicId": "patterns",
+          "title": "Graph Algorithms in Java",
+          "difficulty": "Senior",
+          "explanation": "Graph representation in Java: adjacency list (Map<Integer, List<int[]>> where int[] is {neighbour, weight}) is standard for sparse graphs; adjacency matrix (int[][]) for dense graphs. BFS uses a Queue (ArrayDeque) and is ideal for shortest path in unweighted graphs (level-by-level exploration). DFS uses recursion or a Stack and is ideal for cycle detection, topological sort, and connected components. Dijkstra's algorithm finds shortest path in weighted graphs using a PriorityQueue (min-heap).",
+          "codeExample": "// BFS — shortest path in unweighted graph\nint bfsShortestPath(Map<Integer, List<Integer>> graph, int src, int dst) {\n    Queue<Integer> queue = new ArrayDeque<>();\n    Set<Integer> visited = new HashSet<>();\n    queue.offer(src); visited.add(src);\n    int distance = 0;\n    while (!queue.isEmpty()) {\n        int size = queue.size();\n        for (int i = 0; i < size; i++) {\n            int node = queue.poll();\n            if (node == dst) return distance;\n            for (int neighbor : graph.getOrDefault(node, List.of())) {\n                if (visited.add(neighbor)) queue.offer(neighbor);\n            }\n        }\n        distance++;\n    }\n    return -1;\n}\n\n// Dijkstra — shortest path in weighted graph\nint[] dijkstra(int[][] graph, int n, int src) {\n    int[] dist = new int[n];\n    Arrays.fill(dist, Integer.MAX_VALUE);\n    dist[src] = 0;\n    PriorityQueue<int[]> pq = new PriorityQueue<>(Comparator.comparingInt(a -> a[0]));\n    pq.offer(new int[]{0, src}); // {distance, node}\n    while (!pq.isEmpty()) {\n        int[] curr = pq.poll();\n        int d = curr[0], u = curr[1];\n        if (d > dist[u]) continue; // stale entry\n        for (int[] edge : getNeighbors(graph, u)) { // {v, weight}\n            int v = edge[0], w = edge[1];\n            if (dist[u] + w < dist[v]) {\n                dist[v] = dist[u] + w;\n                pq.offer(new int[]{dist[v], v});\n            }\n        }\n    }\n    return dist;\n}",
+          "whyItMatters": "Graph algorithms are the backbone of network routing, dependency resolution, social graph analysis, and recommendation systems. BFS and DFS are in every senior Java interview. Dijkstra appears in system design (routing services, game pathfinding).",
+          "gotcha": "DFS with a visited set prevents infinite loops in graphs with cycles. Without it, DFS on a cyclic graph loops forever. Always initialise the visited set and add nodes before processing their neighbours (not after) to handle graphs where multiple paths reach the same node."
+        },
+        {
+          "id": "algorithms-patterns-backtracking",
+          "topicId": "algorithms",
+          "subtopicId": "patterns",
+          "title": "Backtracking Template",
+          "difficulty": "Senior",
+          "explanation": "Backtracking is a systematic way to explore all possibilities by building candidates incrementally and abandoning (pruning) a candidate as soon as it's determined it cannot lead to a valid solution. The template: choose an option, explore recursively, unchoose (undo the choice). Problems: permutations, combinations, subsets, N-Queens, Sudoku solver. Time complexity is typically exponential (O(n!) for permutations, O(2ⁿ) for subsets) — pruning reduces the constant factor but not the asymptotic class.",
+          "codeExample": "// Backtracking template\nvoid backtrack(State state, List<Result> results) {\n    if (isComplete(state)) {        // base case: valid solution found\n        results.add(new Result(state));\n        return;\n    }\n    for (Choice choice : getCandidates(state)) {\n        if (!isValid(state, choice)) continue; // prune early\n        applyChoice(state, choice);            // choose\n        backtrack(state, results);             // explore\n        undoChoice(state, choice);             // unchoose\n    }\n}\n\n// Permutations of [1,2,3]\nList<List<Integer>> permutations(int[] nums) {\n    List<List<Integer>> results = new ArrayList<>();\n    boolean[] used = new boolean[nums.length];\n    backtrack(nums, used, new ArrayList<>(), results);\n    return results;\n}\n\nvoid backtrack(int[] nums, boolean[] used,\n               List<Integer> current, List<List<Integer>> results) {\n    if (current.size() == nums.length) {\n        results.add(new ArrayList<>(current)); // copy — important!\n        return;\n    }\n    for (int i = 0; i < nums.length; i++) {\n        if (used[i]) continue;          // prune: already chosen\n        used[i] = true;\n        current.add(nums[i]);           // choose\n        backtrack(nums, used, current, results);\n        current.remove(current.size() - 1); // unchoose\n        used[i] = false;\n    }\n}",
+          "whyItMatters": "Backtracking is the standard approach for constraint satisfaction problems — Sudoku, crosswords, scheduling. The template is reusable across all these problems. Recognising that a problem requires trying all possibilities with pruning is the key insight.",
+          "gotcha": "When adding the current state to results, always add a copy (new ArrayList<>(current)), never the list itself. The list is mutated by subsequent backtracking steps — adding the reference means all results will point to the same final (empty) list."
+        }
+      ]
+    }
+  ]
+}

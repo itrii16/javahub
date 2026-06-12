@@ -1,0 +1,86 @@
+{
+  "id": "system-design",
+  "title": "System Design Interview Patterns",
+  "group": "Interview & System Design",
+  "estimatedMinutes": 90,
+  "subtopics": [
+    {
+      "id": "fundamentals",
+      "title": "System Design Fundamentals",
+      "cards": [
+        {
+          "id": "system-design-fundamentals-scaling",
+          "topicId": "system-design",
+          "subtopicId": "fundamentals",
+          "title": "Scaling Strategies",
+          "difficulty": "Mid",
+          "explanation": "Vertical scaling (scale-up) adds more CPU/RAM to one machine — simple but limited by hardware ceiling and creates a single point of failure. Horizontal scaling (scale-out) adds more machines — limitless but requires stateless services (session state must be externalised to Redis or a DB). Sticky sessions (same user always hits the same server) break horizontal scaling's benefits. Read replicas offload read traffic from the primary DB. Sharding splits data across multiple DB nodes by a shard key — enables write scaling but complicates cross-shard queries.",
+          "codeExample": "// Stateless service: session in Redis, not in-process\n// BAD: in-process session — breaks load balancing\nHttpSession session = request.getSession();\nsession.setAttribute(\"cart\", cart); // lost if server restarts or req hits other pod\n\n// GOOD: externalise state\n@Bean\npublic LettuceConnectionFactory redisConnectionFactory() {\n    return new LettuceConnectionFactory(new RedisStandaloneConfiguration(\"redis\", 6379));\n}\n// application.properties:\nspring.session.store-type=redis  // Spring Session auto-handles everything\n\n// Consistent hashing for sharding (avoids full rehash on node add/remove)\n// Ring of hash values 0..2^32; each node owns a range\n// Adding a node: only rehash ~1/n of keys (not all)\n// Used by: Cassandra, DynamoDB, Redis Cluster\n\n// DB read replica routing in Spring\n@Bean\n@Primary\npublic DataSource routingDataSource(\n        @Qualifier(\"primary\") DataSource primary,\n        @Qualifier(\"replica\") DataSource replica) {\n    return new ReadWriteRoutingDataSource(primary, replica);\n    // Routes @Transactional(readOnly=true) to replica automatically\n}",
+          "whyItMatters": "Every system design interview starts with 'how would you scale this?' Knowing the tools — stateless services, read replicas, sharding, consistent hashing — and their trade-offs lets you give structured, credible answers.",
+          "gotcha": "Sharding by user ID distributes writes evenly but makes 'find all orders from last week' a fan-out query across all shards. Shard key selection is the most consequential sharding decision — choose based on your most common query patterns, not just write distribution."
+        },
+        {
+          "id": "system-design-fundamentals-caching",
+          "topicId": "system-design",
+          "subtopicId": "fundamentals",
+          "title": "Caching Strategies",
+          "difficulty": "Mid",
+          "explanation": "Cache-aside (lazy loading): application checks cache first; on miss, reads from DB and populates cache. Simple and resilient — cache failure doesn't break the app. Write-through: every DB write also updates the cache; data is always fresh but writes are slower. Write-behind (write-back): write to cache first, flush to DB asynchronously — fast writes but risk of data loss on crash. Cache eviction policies: LRU (least recently used) evicts the item not accessed for the longest time; LFU (least frequently used) evicts the item accessed fewest times.",
+          "codeExample": "// Cache-aside with Spring Cache + Redis\n@Service\npublic class ProductService {\n\n    @Cacheable(value = \"products\", key = \"#id\",\n               unless = \"#result == null\")\n    public Product findById(long id) {\n        return productRepo.findById(id).orElse(null); // cache miss: DB call\n    }\n\n    @CacheEvict(value = \"products\", key = \"#product.id\")\n    public Product update(Product product) {\n        return productRepo.save(product); // evict stale cached entry\n    }\n\n    @CachePut(value = \"products\", key = \"#result.id\")\n    public Product create(Product product) {\n        return productRepo.save(product); // populate cache on create\n    }\n}\n\n// Cache TTL — prevent stale data lingering forever\n# application.properties:\nspring.cache.redis.time-to-live=600000  # 10 minutes in ms\n\n// What NOT to cache:\n// ❌ Highly volatile data (stock prices, inventory counts)\n// ❌ Large blobs that evict more valuable small entries\n// ❌ User-specific data in a shared cache without keying by userId\n// ✅ Reference data (product catalogue, config, exchange rates)\n// ✅ Session state, computed aggregates, API responses",
+          "whyItMatters": "Caching is the single most impactful performance optimisation in most web applications. A cache hit ratio of 95% means only 5% of requests hit the DB — a 20× reduction in DB load. Understanding TTL and eviction prevents serving stale data indefinitely.",
+          "gotcha": "Cache stampede (thundering herd): when a cached item expires, all concurrent requests miss and simultaneously hit the DB. Fix: probabilistic early expiration (re-cache when TTL is close, with random probability) or a lock that allows only one request to refresh while others wait for the result."
+        },
+        {
+          "id": "system-design-fundamentals-message-queues",
+          "topicId": "system-design",
+          "subtopicId": "fundamentals",
+          "title": "Message Queues & Async Processing",
+          "difficulty": "Mid",
+          "explanation": "Message queues decouple producers from consumers temporally — producers publish without waiting for consumers to process. Kafka is a distributed log: messages are persisted, ordered within a partition, replayable, and consumed by multiple independent consumer groups. RabbitMQ is a traditional message broker: flexible routing (topic, fanout, direct exchanges), messages are deleted after consumption. Choose Kafka for event sourcing, audit logs, and stream processing; RabbitMQ for task queues, fanout notifications, and complex routing.",
+          "codeExample": "// Spring Kafka producer\n@Service\npublic class OrderEventPublisher {\n    private final KafkaTemplate<String, OrderEvent> kafka;\n\n    public void publish(OrderEvent event) {\n        kafka.send(\"orders\", event.orderId(), event)  // key=orderId ensures ordering\n             .addCallback(\n                 result  -> log.info(\"Published offset {}\", result.getRecordMetadata().offset()),\n                 failure -> log.error(\"Publish failed\", failure)\n             );\n    }\n}\n\n// Spring Kafka consumer\n@Component\npublic class InventoryConsumer {\n    @KafkaListener(topics = \"orders\",\n                   groupId = \"inventory-service\",\n                   concurrency = \"3\")  // 3 consumer threads\n    public void onOrder(OrderEvent event,\n                        Acknowledgment ack) {\n        try {\n            inventoryService.reserve(event);\n            ack.acknowledge();     // manual commit after successful processing\n        } catch (Exception e) {\n            // Don't ack — message will be redelivered (at-least-once)\n            log.error(\"Failed to process order {}\", event.orderId(), e);\n        }\n    }\n}\n\n// Idempotency key in consumer — handle duplicate delivery\npublic void reserve(OrderEvent event) {\n    if (processedIds.contains(event.orderId())) return; // already processed\n    // ... process ...\n    processedIds.add(event.orderId());\n}",
+          "whyItMatters": "Async processing via queues is what separates scalable architectures from brittle ones. A checkout flow that synchronously calls payment, inventory, email, and shipping is one slow service away from timing out. Queues absorb spikes, enable retry, and let each service scale independently.",
+          "gotcha": "Kafka's at-least-once delivery guarantee means duplicate messages are possible (producer retry on network failure, consumer crash after processing but before committing). Every Kafka consumer must be idempotent — processing the same message twice must be safe."
+        }
+      ]
+    },
+    {
+      "id": "classic-designs",
+      "title": "Classic System Design Problems",
+      "cards": [
+        {
+          "id": "system-design-classic-designs-url-shortener",
+          "topicId": "system-design",
+          "subtopicId": "classic-designs",
+          "title": "URL Shortener",
+          "difficulty": "Mid",
+          "explanation": "Requirements: shorten a URL to a 6–8 character code, redirect on access, handle 100M URLs, 10:1 read/write ratio. Core design: generate a unique ID (auto-increment or Snowflake), encode it to base62 (a-z A-Z 0-9), store the mapping in a DB. For redirects, use 301 (permanent — browser caches, reduces server load) or 302 (temporary — every request hits the server, enabling analytics). A Redis cache in front of the DB serves the read-heavy redirect path.",
+          "codeExample": "// Base62 encoding\nprivate static final String CHARS = \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\";\n\nString encode(long id) {\n    StringBuilder sb = new StringBuilder();\n    while (id > 0) {\n        sb.append(CHARS.charAt((int)(id % 62)));\n        id /= 62;\n    }\n    return sb.reverse().toString();\n}\n\nlong decode(String code) {\n    long id = 0;\n    for (char c : code.toCharArray())\n        id = id * 62 + CHARS.indexOf(c);\n    return id;\n}\n\n// Redirect endpoint with cache\n@GetMapping(\"/{code}\")\npublic ResponseEntity<Void> redirect(@PathVariable String code) {\n    String url = cache.get(code); // Redis first\n    if (url == null) {\n        url = urlRepo.findByCode(code)\n                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND))\n                     .getOriginalUrl();\n        cache.set(code, url, Duration.ofHours(24));\n    }\n    return ResponseEntity.status(HttpStatus.FOUND)  // 302\n                         .location(URI.create(url))\n                         .build();\n}\n\n// Capacity estimation:\n// 100M URLs × ~500 bytes = 50 GB storage (manageable)\n// 1000 reads/s × 1KB response = 1 MB/s bandwidth\n// Cache 20% of URLs covers 80% of traffic (Pareto)",
+          "whyItMatters": "URL shortener is the canonical system design warm-up. It covers ID generation, encoding, DB schema, caching, and redirect semantics — all in a bounded, understandable problem. The same building blocks appear in QR codes, referral tracking, and deep linking.",
+          "gotcha": "Using hash(url) as the code causes collisions. Two different URLs can hash to the same code — requiring a collision resolution strategy. Using a generated ID (auto-increment or Snowflake) avoids collisions entirely and is simpler."
+        },
+        {
+          "id": "system-design-classic-designs-rate-limiter",
+          "topicId": "system-design",
+          "subtopicId": "classic-designs",
+          "title": "Rate Limiter",
+          "difficulty": "Senior",
+          "explanation": "Rate limiting controls how many requests a client can make in a window. Token bucket: a bucket holds up to N tokens, refills at R tokens/second; each request consumes one token; requests when empty are rejected (429). Sliding window log: store timestamps of recent requests; reject if count in last window exceeds limit — precise but memory-intensive. Fixed window: simple counter per minute, but allows 2× the limit at window boundaries. For distributed rate limiting across multiple instances, use Redis as the shared counter with a Lua script for atomic check-and-decrement.",
+          "codeExample": "// Token bucket with Redis (atomic Lua script)\n// KEYS[1] = rate:userId, ARGV[1] = window seconds, ARGV[2] = limit\nString lua = \"\"\"\n    local tokens = redis.call('GET', KEYS[1])\n    if tokens == false then\n        redis.call('SET', KEYS[1], ARGV[2] - 1)\n        redis.call('EXPIRE', KEYS[1], ARGV[1])\n        return 1  -- allowed\n    end\n    if tonumber(tokens) <= 0 then\n        return 0  -- rejected\n    end\n    redis.call('DECR', KEYS[1])\n    return 1  -- allowed\n    \"\"\";\n\nBoolean allowed = (Boolean) redis.execute(\n    new DefaultRedisScript<>(lua, Boolean.class),\n    List.of(\"rate:\" + userId), \"60\", \"100\"\n);\n\nif (!Boolean.TRUE.equals(allowed)) {\n    response.setHeader(\"Retry-After\", \"60\");\n    response.sendError(429, \"Too Many Requests\");\n    return;\n}\n\n// Spring filter for rate limiting\n@Component\npublic class RateLimitFilter extends OncePerRequestFilter {\n    @Override\n    protected void doFilterInternal(HttpServletRequest req,\n                                    HttpServletResponse res,\n                                    FilterChain chain) throws IOException, ServletException {\n        String userId = extractUserId(req);\n        if (!rateLimiter.isAllowed(userId)) {\n            res.setStatus(429);\n            res.setHeader(\"Retry-After\", \"60\");\n            return;\n        }\n        chain.doFilter(req, res);\n    }\n}",
+          "whyItMatters": "Rate limiting protects services from intentional (DoS) and unintentional (bug in client) overload. It ensures fair resource distribution — one misbehaving client can't degrade the service for all others. Every public API should have it.",
+          "gotcha": "IP-based rate limiting is easily bypassed with a botnet or shared NAT (an entire office behind one IP gets throttled together). Rate limit by API key or authenticated user ID for better precision. For unauthenticated endpoints, combine IP + fingerprinting."
+        },
+        {
+          "id": "system-design-classic-designs-notification-system",
+          "topicId": "system-design",
+          "subtopicId": "classic-designs",
+          "title": "Notification System",
+          "difficulty": "Senior",
+          "explanation": "A notification system delivers messages across channels (push, email, SMS) at scale. Core challenges: fan-out (one event notifying millions of users), delivery guarantees (at-least-once + idempotency to avoid duplicates), channel preference management, and priority (critical alerts must not be queued behind marketing emails). Architecture: API receives notification request → publishes to Kafka topic per channel → channel workers (Push Worker, Email Worker, SMS Worker) consume and deliver → delivery status stored for audit.",
+          "codeExample": "// Notification request → Kafka fan-out\n@Service\npublic class NotificationService {\n\n    public void notify(NotificationRequest req) {\n        // Look up user preferences\n        UserPrefs prefs = prefsRepo.findByUserId(req.userId());\n\n        // Fan out to enabled channels\n        if (prefs.isPushEnabled())\n            kafka.send(\"notifications.push\",\n                new PushNotification(req, prefs.getDeviceToken()));\n        if (prefs.isEmailEnabled())\n            kafka.send(\"notifications.email\",\n                new EmailNotification(req, prefs.getEmail()));\n        if (prefs.isSmsEnabled())\n            kafka.send(\"notifications.sms\",\n                new SmsNotification(req, prefs.getPhone()));\n    }\n}\n\n// Push worker — idempotent delivery\n@KafkaListener(topics = \"notifications.push\", groupId = \"push-worker\")\npublic void sendPush(PushNotification notif, Acknowledgment ack) {\n    // Check deduplication store before sending\n    if (sentNotifications.contains(notif.idempotencyKey())) {\n        ack.acknowledge(); return; // already sent\n    }\n    try {\n        fcm.send(notif.deviceToken(), notif.title(), notif.body());\n        sentNotifications.add(notif.idempotencyKey(), Duration.ofDays(7));\n        ack.acknowledge();\n    } catch (FcmException e) {\n        log.error(\"Push failed for user {}\", notif.userId(), e);\n        // Don't ack — Kafka will redeliver\n    }\n}",
+          "whyItMatters": "Notification systems appear in nearly every product at scale. The patterns here — Kafka fan-out, per-channel workers, idempotency keys, priority queues — are reusable across alert systems, order updates, marketing campaigns, and real-time messaging.",
+          "gotcha": "Fan-out on write (writing to each user's inbox at publish time) works well for low follower counts but doesn't scale for influencers with millions of followers — a single post write triggers millions of inserts. Use fan-out on read (store once, expand per viewer) for high-fan-out entities, with a hybrid for medium accounts."
+        }
+      ]
+    }
+  ]
+}
