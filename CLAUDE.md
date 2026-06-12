@@ -60,7 +60,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 | Ticket | Description | Status |
 |--------|-------------|--------|
 | T20 | Assessment question bank: types, 30+ questions, store slice | ✅ Done |
-| T21 | Assessment quiz UI: adaptive flow, question card, skip option | ⬜ Pending |
+| T21 | Assessment quiz UI: adaptive flow, question card, skip option | ✅ Done |
 | T22 | Skill radar chart (Recharts), score computation, study plan results page | ⬜ Pending |
 
 ### F3 — Quiz / Practice Mode (Phase 3)
