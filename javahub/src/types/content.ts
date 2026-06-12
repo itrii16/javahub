@@ -50,3 +50,12 @@ export interface FlatCard extends ContentCard {
   topicTitle: string
   subtopicTitle: string
 }
+
+export type CardStatus = 'unseen' | 'learning' | 'mastered'
+
+export interface SM2State {
+  interval: number
+  repetition: number
+  efactor: number
+  dueDate: string
+}
