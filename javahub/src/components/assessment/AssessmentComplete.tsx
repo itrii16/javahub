@@ -32,12 +32,16 @@ function computeTopicScores(answers: AssessmentAnswer[], topicIds: string[], que
 export function AssessmentComplete({ answers, topicIds }: Props) {
   const navigate = useNavigate()
   const completeAssessment = useAppStore(s => s.completeAssessment)
+  const setUserProfile = useAppStore(s => s.setUserProfile)
 
   useEffect(() => {
     const timer = setTimeout(async () => {
       const { default: questionsData } = await import('@/content/assessment/questions.json')
+      const { computeGroupScores } = await import('@/lib/scoreCalculator')
       const scores = computeTopicScores(answers, topicIds, questionsData as { id: string; topicId: string }[])
+      const groupScores = computeGroupScores(scores)
       completeAssessment(scores)
+      setUserProfile({ topicScores: scores, groupScores, assessmentDate: new Date().toISOString() })
       navigate('/assessment/results')
     }, 800)
     return () => clearTimeout(timer)
