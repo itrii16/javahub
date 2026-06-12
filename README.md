@@ -29,9 +29,9 @@ javahub/
 │   ├── content/         # Topic + card JSON data
 │   ├── components/
 │   │   ├── layout/      # AppShell, Sidebar, Topbar, Breadcrumb
-│   │   ├── cards/       # ContentCard
-│   │   └── study/       # FlashCard, RatingBar
-│   ├── pages/           # HomePage, TopicPage, CardDetailPage, StudyPage
+│   │   ├── cards/       # ContentCard, LockedCardPlaceholder
+│   │   └── study/       # FlashCard, RatingBar, TeachItBackCard
+│   ├── pages/           # HomePage, TopicPage, CardDetailPage, StudyPage, SessionSummaryPage
 │   ├── store/           # Zustand store (progress, bookmarks, notes, streak)
 │   ├── lib/             # SM-2 spaced repetition algorithm
 │   └── types/           # TypeScript interfaces
@@ -44,7 +44,11 @@ javahub/
 - Collapsible sidebar with subtopic navigation
 - Per-card difficulty badges (Beginner / Mid / Senior), bookmarks, and notes
 - Difficulty filter on topic pages
-- Spaced repetition study mode (SM-2 algorithm)
+- Spaced repetition study mode (SM-2 algorithm) with flip cards and 1–5 recall rating
+- **Teach it back** mode — write your own explanation before revealing the model answer (Feynman technique)
+- **Session summary** — confidence distribution chart, cards to review, upcoming due dates
+- **Guided path** mode — Mid/Senior cards locked until prerequisite difficulty is mastered
+- Homepage with due-today cards, last visited, and per-topic mastery progress
 - Streak tracking — all progress persisted to localStorage
 
 ## Available scripts
