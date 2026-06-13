@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom'
-import { useAppStore } from '@/store/useAppStore'
+import SearchTrigger from '@/components/search/SearchTrigger'
 
 interface Props {
   onMenuClick: () => void
+  onSearchClick: () => void
 }
 
-export default function Topbar({ onMenuClick }: Props) {
-  const streak = useAppStore(s => s.streak)
-
+export default function Topbar({ onMenuClick, onSearchClick }: Props) {
   return (
     <header className="flex items-center justify-between px-4 md:px-6 h-12 bg-gray-950 border-b border-gray-800/60 flex-shrink-0">
       <div className="flex items-center gap-3">
@@ -29,12 +28,7 @@ export default function Topbar({ onMenuClick }: Props) {
         </Link>
       </div>
 
-      {streak.count > 0 && (
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <span className="font-medium text-gray-400">{streak.count}</span>
-          <span>day streak</span>
-        </div>
-      )}
+      <SearchTrigger onClick={onSearchClick} />
     </header>
   )
 }

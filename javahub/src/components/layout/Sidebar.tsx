@@ -119,6 +119,13 @@ export default function Sidebar({ onNavigate }: Props) {
         >
           Cheat Sheets
         </Link>
+        <Link
+          to="/bookmarks"
+          onClick={onNavigate}
+          className="block px-4 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+        >
+          Bookmarks & Notes
+        </Link>
       </div>
 
       <div className="mb-5">

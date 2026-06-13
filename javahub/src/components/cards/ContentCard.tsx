@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Prism from 'prismjs'
 import { useAppStore } from '@/store/useAppStore'
 import type { ContentCard as ContentCardType } from '@/types'
+import { renderMarkdown } from '@/lib/renderMarkdown'
 
 const DIFFICULTY_STYLES = {
   Beginner: 'text-green-400 bg-green-400/8 border-green-400/15',
@@ -30,6 +31,7 @@ interface Props {
 
 export default function ContentCard({ card, compact = false }: Props) {
   const codeRef = useRef<HTMLElement>(null)
+  const [noteTab, setNoteTab] = useState<'edit' | 'preview'>('edit')
   const toggleBookmark = useAppStore(s => s.toggleBookmark)
   const isBookmarked = useAppStore(s => s.isBookmarked(card.id))
   const note = useAppStore(s => s.getNote(card.id))
@@ -156,16 +158,36 @@ export default function ContentCard({ card, compact = false }: Props) {
       {/* Notes */}
       {!compact && (
         <div className="px-5 pb-5">
-          <label className="block text-[11px] font-semibold text-gray-600 uppercase tracking-[0.06em] mb-2">
-            Notes
-          </label>
-          <textarea
-            value={note}
-            onChange={e => setNote(card.id, e.target.value)}
-            placeholder="Add your notes here..."
-            rows={3}
-            className="w-full text-sm bg-gray-800/50 border border-gray-800 rounded-lg px-3 py-2.5 text-gray-300 placeholder-gray-700 focus:outline-none focus:border-gray-600 resize-y transition-colors"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-[0.06em]">Notes</span>
+            <div className="flex gap-1">
+              {(['edit', 'preview'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setNoteTab(tab)}
+                  className={`text-[11px] px-2 py-0.5 rounded transition-colors ${
+                    noteTab === tab ? 'bg-gray-700 text-gray-200' : 'text-gray-600 hover:text-gray-400'
+                  }`}
+                >
+                  {tab === 'edit' ? 'Edit' : 'Preview'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {noteTab === 'edit' ? (
+            <textarea
+              value={note}
+              onChange={e => setNote(card.id, e.target.value)}
+              placeholder="Add your notes here… (Markdown supported)"
+              rows={4}
+              className="w-full text-sm bg-gray-800/50 border border-gray-800 rounded-lg px-3 py-2.5 text-gray-300 placeholder-gray-700 focus:outline-none focus:border-gray-600 resize-y transition-colors font-mono"
+            />
+          ) : (
+            <div
+              className="min-h-[6rem] bg-gray-800/30 border border-gray-800 rounded-lg px-3 py-2.5 text-sm"
+              dangerouslySetInnerHTML={{ __html: note.trim() ? renderMarkdown(note) : '<p class="text-gray-700 italic">Nothing to preview</p>' }}
+            />
+          )}
         </div>
       )}
     </article>
