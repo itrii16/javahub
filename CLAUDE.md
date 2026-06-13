@@ -110,7 +110,7 @@ Before committing, verify the following to catch integration gaps:
 ### F9 — Java News (Phase 4)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T32 | Java news: timeline JSON (Java 8–21), What's New cards, version history page | ⬜ Pending |
+| T32 | Java news: timeline JSON (Java 8–21), What's New cards, version history page | ✅ Done |
 
 ---
 

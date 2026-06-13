@@ -199,3 +199,29 @@ export interface UserProfile {
   topicScores: Record<string, number>
   groupScores: Record<string, number>
 }
+
+export type FeatureStatus = 'Preview' | 'Incubating' | 'Finalized'
+
+export interface JepCard {
+  jepNumber: number
+  title: string
+  plainEnglishSummary: string
+  codeExample?: string
+  status: FeatureStatus
+  productionSafe: boolean
+  javaVersion: number
+}
+
+export interface JavaRelease {
+  version: number
+  releaseDate: string
+  isLts: boolean
+  summary: string
+  jeps: JepCard[]
+  majorFeatures: string[]
+}
+
+export interface JavaTimeline {
+  releases: JavaRelease[]
+  lastUpdated: string
+}

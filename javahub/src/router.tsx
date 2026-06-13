@@ -20,6 +20,7 @@ import BehavioralQuestionsPage from '@/pages/BehavioralQuestionsPage'
 import SystemDesignListPage from '@/pages/SystemDesignListPage'
 import SystemDesignPage from '@/pages/SystemDesignPage'
 import BookmarksPage from '@/pages/BookmarksPage'
+import JavaNewsPage from '@/pages/JavaNewsPage'
 
 export const router = createBrowserRouter(
   [
@@ -115,6 +116,10 @@ export const router = createBrowserRouter(
         {
           path: 'bookmarks',
           element: <BookmarksPage />,
+        },
+        {
+          path: 'java-news',
+          element: <JavaNewsPage />,
         },
       ],
     },
