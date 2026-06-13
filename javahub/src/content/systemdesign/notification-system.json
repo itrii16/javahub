@@ -1,0 +1,49 @@
+{
+  "id": "notification-system",
+  "title": "Notification System",
+  "description": "Design a multi-channel notification system that delivers push, email, and SMS notifications at scale with priority queuing and delivery guarantees.",
+  "requirements": [
+    "Send notifications via Push (APNs/FCM), Email (SES), and SMS (Twilio)",
+    "Support priority levels: critical (SLA 5s), high (30s), normal (5min)",
+    "Users can configure channel preferences and opt-out per category",
+    "Deduplicate notifications — no duplicate deliveries",
+    "Track delivery status: sent, delivered, failed, read"
+  ],
+  "nonFunctionalReqs": [
+    "10M notifications/day, spikes to 500K/minute",
+    "At-least-once delivery guarantee",
+    "Critical alerts delivered within 5 seconds P99",
+    "Retry with exponential backoff on delivery failure (max 3 attempts)"
+  ],
+  "components": [
+    { "id": "api",         "label": "API Service",        "x": 20,  "y": 160, "width": 110, "height": 50, "shape": "rect",     "javaNote": "REST endpoint POST /notifications. Validates payload, looks up user preferences, publishes NotificationEvent to Kafka with priority routing key. Returns 202 Accepted immediately." },
+    { "id": "notif-svc",  "label": "Notification Svc",   "x": 175, "y": 160, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Kafka consumer. Reads user preferences from DB. Fans out to per-channel topics: push-notifications, email-notifications, sms-notifications. Attaches idempotency key (SHA256 of userId+templateId+timestamp window)." },
+    { "id": "kafka",       "label": "Priority Queue\n(Kafka)", "x": 345, "y": 80, "width": 130, "height": 50, "shape": "rect", "javaNote": "Three Kafka topics by priority: notifications-critical (1 partition, replication=3), notifications-high, notifications-normal. Critical topic has dedicated consumer group with min.insync.replicas=2 for durability." },
+    { "id": "push-worker","label": "Push Worker\n(APNs/FCM)", "x": 525, "y": 40, "width": 130, "height": 50, "shape": "rect", "javaNote": "Connects to Apple APNs (HTTP/2) and Google FCM. Batches up to 500 tokens per FCM multicast request. On delivery failure (invalid token): remove from DB. On FCM 429: exponential backoff with jitter." },
+    { "id": "email-worker","label": "Email Worker\n(SES)",    "x": 525, "y": 140, "width": 130, "height": 50, "shape": "rect", "javaNote": "AWS SES with SendBulkTemplatedEmail API. Handles bounces/complaints via SNS → SQS → worker that marks emails as invalid. DKIM/SPF/DMARC configured for deliverability." },
+    { "id": "sms-worker",  "label": "SMS Worker\n(Twilio)",   "x": 525, "y": 240, "width": 130, "height": 50, "shape": "rect", "javaNote": "Twilio Messaging API. Country-based sender ID routing. Most expensive channel — only used for critical/high priority or explicit user preference. Status callbacks update delivery status in DB." },
+    { "id": "prefdb",      "label": "User Preferences\nDB",   "x": 175, "y": 300, "width": 120, "height": 50, "shape": "cylinder", "javaNote": "Postgres table: (user_id, channel, category, enabled, updated_at). Cached in Redis (5 min TTL). Schema allows per-category opt-out: user may want push for security alerts but not marketing." }
+  ],
+  "connections": [
+    { "from": "api",         "to": "notif-svc",  "label": "Kafka event" },
+    { "from": "notif-svc",   "to": "kafka",      "label": "fan-out" },
+    { "from": "kafka",       "to": "push-worker","label": "consume" },
+    { "from": "kafka",       "to": "email-worker","label": "consume" },
+    { "from": "kafka",       "to": "sms-worker", "label": "consume" },
+    { "from": "notif-svc",   "to": "prefdb",     "label": "read prefs" }
+  ],
+  "componentBreakdown": [
+    {
+      "componentId": "notif-svc",
+      "heading": "Fan-out with Idempotency Key",
+      "detail": "The notification service fans out one event to multiple channel workers. Each delivery attempt includes an idempotency key to prevent duplicate sends on retries.",
+      "javaImpl": "@KafkaListener(topics = \"notification-events\")\npublic void process(NotificationEvent event) {\n    UserPreferences prefs = prefCache.get(event.getUserId());\n    \n    String idemKey = DigestUtils.sha256Hex(\n        event.getUserId() + event.getTemplateId() + \n        event.getWindowMinute());\n    \n    if (prefs.isPushEnabled(event.getCategory())) {\n        kafkaTemplate.send(\"push-notifications\",\n            new PushTask(event, idemKey));\n    }\n    if (prefs.isEmailEnabled(event.getCategory())) {\n        kafkaTemplate.send(\"email-notifications\",\n            new EmailTask(event, idemKey));\n    }\n}"
+    },
+    {
+      "componentId": "push-worker",
+      "heading": "FCM Batch Push with Retry",
+      "detail": "FCM supports up to 500 registration tokens per multicast call. Exponential backoff with jitter on rate limits. Invalid tokens are pruned immediately to keep the token DB clean.",
+      "javaImpl": "public void sendBatch(List<String> tokens, Notification notification) {\n    MulticastMessage message = MulticastMessage.builder()\n        .addAllTokens(tokens)\n        .setNotification(notification)\n        .build();\n    \n    BatchResponse response = FirebaseMessaging.getInstance().sendMulticast(message);\n    \n    IntStream.range(0, response.getResponses().size())\n        .filter(i -> !response.getResponses().get(i).isSuccessful())\n        .forEach(i -> {\n            String errorCode = response.getResponses().get(i).getException().getMessagingErrorCode().name();\n            if (\"UNREGISTERED\".equals(errorCode)) {\n                tokenRepo.delete(tokens.get(i));\n            }\n        });\n}"
+    }
+  ]
+}

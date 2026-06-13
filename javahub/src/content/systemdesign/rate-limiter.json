@@ -1,0 +1,52 @@
+{
+  "id": "rate-limiter",
+  "title": "Rate Limiter",
+  "description": "Design a distributed rate limiter middleware that enforces per-user/per-IP request quotas across a fleet of API servers.",
+  "requirements": [
+    "Enforce request rate limits per user ID and per IP",
+    "Support multiple algorithms: token bucket, sliding window",
+    "Return 429 Too Many Requests with Retry-After header when limit exceeded",
+    "Configure limits per API endpoint (e.g. /login stricter than /search)",
+    "Limits survive individual API server restarts"
+  ],
+  "nonFunctionalReqs": [
+    "< 5ms overhead per request (P99)",
+    "Handle 500K requests/second across cluster",
+    "Consistent enforcement — no overshooting limit by >1%",
+    "High availability — Redis failure degrades to allow-all, not block-all"
+  ],
+  "components": [
+    { "id": "client",    "label": "Client",             "x": 20,  "y": 160, "width": 100, "height": 50, "shape": "rect",     "javaNote": "Any HTTP client. Receives 429 with headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After." },
+    { "id": "gateway",   "label": "API Gateway",        "x": 160, "y": 160, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Entry point. Extracts userId from JWT or falls back to IP. Calls Rate Limiter before routing to upstream service. On 429, short-circuits response immediately." },
+    { "id": "limiter",   "label": "Rate Limiter\nMiddleware", "x": 330, "y": 160, "width": 130, "height": 50, "shape": "rect", "javaNote": "Spring WebFilter or Servlet Filter. Builds Redis key: 'rl:{userId}:{endpoint}:{window}'. Executes Lua script atomically against Redis. Returns allow/deny + remaining tokens." },
+    { "id": "redis",     "label": "Redis\n(Token Bucket State)", "x": 510, "y": 160, "width": 130, "height": 50, "shape": "cylinder", "javaNote": "Stores token counts with EXPIRE. Token bucket in Redis: INCR key → if count == 1 set EXPIRE (start of window). Lua script ensures atomicity: no race between INCR and EXPIRE. Cluster mode: consistent hash keys to same shard." },
+    { "id": "response",  "label": "Response Handler",   "x": 330, "y": 300, "width": 130, "height": 50, "shape": "rect",     "javaNote": "Sets rate limit headers on every response. 200 path: X-RateLimit-Remaining=n. 429 path: body includes retryAfterSeconds computed from window reset time." }
+  ],
+  "connections": [
+    { "from": "client",   "to": "gateway",  "label": "HTTP request" },
+    { "from": "gateway",  "to": "limiter",  "label": "check limit" },
+    { "from": "limiter",  "to": "redis",    "label": "Lua INCR/EXPIRE" },
+    { "from": "limiter",  "to": "response", "label": "allow/deny" },
+    { "from": "response", "to": "client",   "label": "200 or 429" }
+  ],
+  "componentBreakdown": [
+    {
+      "componentId": "limiter",
+      "heading": "Token Bucket Algorithm",
+      "detail": "Each user gets a bucket of N tokens per window. Each request consumes 1 token. Tokens refill at start of next window. Redis INCR is atomic; Lua script prevents race between INCR and EXPIRE.",
+      "javaImpl": "// Lua script executed atomically in Redis\nlocal key = KEYS[1]\nlocal limit = tonumber(ARGV[1])\nlocal current = redis.call('INCR', key)\nif current == 1 then\n  redis.call('EXPIRE', key, ARGV[2])  -- window seconds\nend\nif current > limit then\n  return {0, redis.call('TTL', key)}   -- denied, ttl\nend\nreturn {1, limit - current}            -- allowed, remaining"
+    },
+    {
+      "componentId": "redis",
+      "heading": "Distributed Rate Limiting with Redis Cluster",
+      "detail": "In a multi-node setup, all API servers share Redis state. Use Redis Cluster with consistent hashing so the same user's key always hits the same shard. Lua scripts run atomically per shard.",
+      "javaImpl": "@Component\npublic class RedisRateLimiter {\n    private final RedisScript<List<Long>> script;\n    private final StringRedisTemplate redis;\n    \n    public RateLimitResult check(String userId, String endpoint, int limit, int windowSec) {\n        String key = \"rl:\" + userId + \":\" + endpoint;\n        List<Long> result = redis.execute(script,\n            List.of(key),\n            String.valueOf(limit),\n            String.valueOf(windowSec));\n        boolean allowed = result.get(0) == 1L;\n        long remaining = result.get(1);\n        return new RateLimitResult(allowed, remaining);\n    }\n}"
+    },
+    {
+      "componentId": "gateway",
+      "heading": "Fail-Open Strategy",
+      "detail": "If Redis is unavailable, the limiter should fail open (allow all requests) rather than blocking all traffic. Log the failure and alert on-call. Never fail closed on infrastructure issues.",
+      "javaImpl": "public boolean isAllowed(String userId, String endpoint) {\n    try {\n        return redisRateLimiter.check(userId, endpoint, limit, window).isAllowed();\n    } catch (RedisException e) {\n        log.error(\"Rate limiter Redis unavailable, failing open\", e);\n        meterRegistry.counter(\"rate_limiter.redis.failure\").increment();\n        return true; // fail open\n    }\n}"
+    }
+  ]
+}

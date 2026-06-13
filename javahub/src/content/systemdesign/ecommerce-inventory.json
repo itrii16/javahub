@@ -1,0 +1,56 @@
+{
+  "id": "ecommerce-inventory",
+  "title": "E-Commerce Inventory",
+  "description": "Design an inventory management system for an e-commerce platform that handles concurrent stock reservations, prevents overselling, and syncs warehouse state.",
+  "requirements": [
+    "Reserve stock atomically when order is placed (prevent overselling)",
+    "Release reserved stock if order payment fails or expires (15 min timeout)",
+    "Near-real-time inventory count visible to customers (eventual consistency ok)",
+    "Sync inventory updates from multiple warehouses",
+    "Support flash sales with high concurrency (10K concurrent add-to-cart)"
+  ],
+  "nonFunctionalReqs": [
+    "Zero overselling — strong consistency for reservations",
+    "< 100ms P99 for stock check and reservation",
+    "Handle 10K concurrent reservations per SKU during flash sales",
+    "Warehouse sync within 30 seconds of warehouse update"
+  ],
+  "components": [
+    { "id": "gateway",   "label": "API Gateway",       "x": 20,  "y": 160, "width": 110, "height": 50, "shape": "rect",     "javaNote": "Routes /inventory GET requests to Inventory Service and /orders POST to Order Service. Applies per-user rate limiting during flash sales to prevent single user from hogging reservations." },
+    { "id": "inv-svc",   "label": "Inventory Service", "x": 175, "y": 80,  "width": 120, "height": 50, "shape": "rect",     "javaNote": "Core service. Two operations: checkStock (reads Redis) and reserveStock (optimistic lock on Postgres). Publishes StockUpdated events to Kafka for downstream consumers (search index, warehouse sync)." },
+    { "id": "db",        "label": "DB (Postgres)",     "x": 345, "y": 80,  "width": 120, "height": 50, "shape": "cylinder", "javaNote": "Table: inventory(sku_id PK, total_qty, reserved_qty, version). Optimistic locking: UPDATE inventory SET reserved_qty=reserved_qty+1, version=version+1 WHERE sku_id=? AND version=? AND total_qty-reserved_qty >= 1. Returns 0 rows on conflict → retry or reject." },
+    { "id": "redis",     "label": "Redis Cache",       "x": 345, "y": 220, "width": 120, "height": 50, "shape": "cylinder", "javaNote": "Stores available_qty per SKU with 10s TTL. Read path hits Redis first. On cache miss: read from DB. On reservation: DECRBY in Redis + update DB. For flash sales: use Redis DECR as pre-check to reject early before DB contention." },
+    { "id": "order-svc", "label": "Order Service",     "x": 175, "y": 300, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Creates order, calls Inventory Service to reserve stock. Publishes OrderCreated to Kafka. Reservation expires after 15 min via Kafka Streams timer or scheduled job — releases stock back to Inventory Service." },
+    { "id": "kafka",     "label": "Event Bus (Kafka)", "x": 345, "y": 360, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Topics: stock-updates (inventory changes), order-events (created/paid/expired/cancelled). Warehouse Worker consumes stock-updates to sync physical inventory. Order Service consumes order-events to auto-release expired reservations." },
+    { "id": "warehouse", "label": "Warehouse Worker",  "x": 525, "y": 300, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Kafka consumer that processes warehouse inventory updates (shipments received, returns processed). Uses UPSERT with version check to apply updates idempotently. Publishes reconciliation events on discrepancies." }
+  ],
+  "connections": [
+    { "from": "gateway",   "to": "inv-svc",   "label": "check/reserve" },
+    { "from": "gateway",   "to": "order-svc", "label": "place order" },
+    { "from": "inv-svc",   "to": "db",        "label": "optimistic lock" },
+    { "from": "inv-svc",   "to": "redis",     "label": "cache aside" },
+    { "from": "order-svc", "to": "inv-svc",   "label": "reserve stock" },
+    { "from": "inv-svc",   "to": "kafka",     "label": "StockUpdated" },
+    { "from": "kafka",     "to": "warehouse", "label": "sync" }
+  ],
+  "componentBreakdown": [
+    {
+      "componentId": "db",
+      "heading": "Optimistic Locking for Oversell Prevention",
+      "detail": "Optimistic locking avoids pessimistic row-level locks (SELECT FOR UPDATE) which serialize all reservations. Instead, version column detects conflicts. On 0 rows updated: retry up to 3× or return 'out of stock'.",
+      "javaImpl": "@Transactional\npublic boolean reserve(String skuId, int qty) {\n    for (int attempt = 0; attempt < 3; attempt++) {\n        Inventory inv = inventoryRepo.findById(skuId).orElseThrow();\n        int available = inv.getTotalQty() - inv.getReservedQty();\n        if (available < qty) return false;\n        \n        int updated = inventoryRepo.reserveWithVersion(\n            skuId, qty, inv.getVersion());\n        \n        if (updated > 0) {\n            redis.decrBy(\"inv:\" + skuId, qty);\n            return true;\n        }\n        // conflict — retry\n    }\n    return false; // too many conflicts\n}"
+    },
+    {
+      "componentId": "redis",
+      "heading": "Flash Sale: Redis Pre-Check",
+      "detail": "During flash sales, DB becomes a bottleneck with thousands of concurrent optimistic lock retries. Use Redis DECR as a pre-check gate: only requests that successfully DECR (> 0) proceed to DB reservation. Reduces DB contention by 90%+.",
+      "javaImpl": "// Pre-check with Redis (fast path)\npublic boolean preCheck(String skuId, int qty) {\n    Long remaining = redis.execute(new DefaultRedisScript<>(\n        \"local v = redis.call('DECRBY', KEYS[1], ARGV[1])\" +\n        \"if v < 0 then redis.call('INCRBY', KEYS[1], ARGV[1]) return 0 end\" +\n        \"return 1\", Long.class),\n        List.of(\"inv:\" + skuId), String.valueOf(qty));\n    return remaining != null && remaining == 1L;\n}"
+    },
+    {
+      "componentId": "order-svc",
+      "heading": "Reservation Expiry & Release",
+      "detail": "Orders reserved but not paid within 15 minutes must release stock. Options: (1) Kafka Streams windowed aggregation, (2) scheduled job polling for expired reservations, (3) Redis TTL trigger via keyspace notifications.",
+      "javaImpl": "@Scheduled(fixedDelay = 60_000)\npublic void releaseExpiredReservations() {\n    Instant cutoff = Instant.now().minus(15, MINUTES);\n    List<Order> expired = orderRepo\n        .findByStatusAndCreatedAtBefore(PENDING_PAYMENT, cutoff);\n    \n    for (Order order : expired) {\n        inventoryService.release(order.getSkuId(), order.getQty());\n        order.setStatus(EXPIRED);\n        orderRepo.save(order);\n        kafkaTemplate.send(\"order-events\",\n            new OrderExpiredEvent(order.getId()));\n    }\n}"
+    }
+  ]
+}

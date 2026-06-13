@@ -1,0 +1,57 @@
+{
+  "id": "url-shortener",
+  "title": "URL Shortener",
+  "description": "Design a scalable URL shortening service like bit.ly that handles billions of redirects per day with low latency.",
+  "requirements": [
+    "Given a long URL, return a short URL (6-8 char alias)",
+    "Redirect short URL to original long URL",
+    "URLs should expire after a configurable TTL (default 1 year)",
+    "Support custom aliases (e.g. /my-link)",
+    "Track click analytics per short URL"
+  ],
+  "nonFunctionalReqs": [
+    "100M new URLs/day write throughput",
+    "10B redirects/day (100:1 read/write ratio)",
+    "< 10ms p99 redirect latency",
+    "99.99% availability",
+    "Data durability — no URL loss"
+  ],
+  "components": [
+    { "id": "client",    "label": "Client",         "x": 20,  "y": 160, "width": 100, "height": 50, "shape": "rect",     "javaNote": "Browser or mobile client. Sends POST /shorten with long URL in body. Receives 201 + short URL in response." },
+    { "id": "gateway",   "label": "API Gateway",    "x": 160, "y": 160, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Spring Cloud Gateway or AWS API Gateway. Handles rate limiting, auth, and routes /shorten to Shortener Service and /:alias to Redirect Service." },
+    { "id": "shortener", "label": "Shortener Svc",  "x": 330, "y": 80,  "width": 130, "height": 50, "shape": "rect",     "javaNote": "Spring Boot service. Calls ID Generator, encodes to base62, stores mapping in Postgres. Base62: chars 0-9A-Za-z → 62^6 ≈ 56 billion unique aliases." },
+    { "id": "idgen",     "label": "ID Generator\n(Snowflake)", "x": 510, "y": 80, "width": 130, "height": 50, "shape": "diamond", "javaNote": "Twitter Snowflake-style 64-bit ID: 41-bit timestamp + 10-bit machine ID + 12-bit sequence. Guarantees unique monotonic IDs without coordination. Base62 encode lower 38 bits → 6 char alias." },
+    { "id": "cache",     "label": "Cache (Redis)",  "x": 330, "y": 220, "width": 130, "height": 50, "shape": "cylinder", "javaNote": "Redis stores alias→URL mappings with TTL. On redirect: GET alias → if hit, return 301; if miss, query DB, store in Redis with remaining TTL. Cache hit ratio target: 99%." },
+    { "id": "db",        "label": "DB (Postgres)",  "x": 510, "y": 220, "width": 130, "height": 50, "shape": "cylinder", "javaNote": "Stores: (alias VARCHAR PK, long_url TEXT, created_at, expires_at, user_id). Sharded by alias hash. Index on created_at for expiry cleanup job. 301 vs 302: use 301 (permanent) to let browser cache redirect; use 302 if you need accurate click counting." },
+    { "id": "queue",     "label": "Analytics Queue\n(Kafka)", "x": 330, "y": 360, "width": 130, "height": 50, "shape": "rect", "javaNote": "Redirect service publishes ClickEvent{alias, timestamp, userAgent, ip} to Kafka. Analytics consumers aggregate asynchronously — keeps redirect latency unaffected by analytics writes." }
+  ],
+  "connections": [
+    { "from": "client",    "to": "gateway",   "label": "HTTPS" },
+    { "from": "gateway",   "to": "shortener", "label": "POST /shorten" },
+    { "from": "gateway",   "to": "cache",     "label": "GET /:alias" },
+    { "from": "shortener", "to": "idgen",     "label": "next ID" },
+    { "from": "shortener", "to": "db",        "label": "INSERT" },
+    { "from": "cache",     "to": "db",        "label": "cache miss" },
+    { "from": "cache",     "to": "queue",     "label": "ClickEvent" }
+  ],
+  "componentBreakdown": [
+    {
+      "componentId": "idgen",
+      "heading": "Snowflake ID → Base62 Encoding",
+      "detail": "Generate globally unique IDs without distributed coordination. Encode to base62 for URL-safe short aliases.",
+      "javaImpl": "private static final String BASE62 = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\";\n\npublic String toBase62(long id) {\n    StringBuilder sb = new StringBuilder();\n    while (id > 0) {\n        sb.append(BASE62.charAt((int)(id % 62)));\n        id /= 62;\n    }\n    return sb.reverse().toString();\n}"
+    },
+    {
+      "componentId": "cache",
+      "heading": "Redis Cache-Aside Pattern",
+      "detail": "Read from cache first; on miss, load from DB and populate cache with TTL. 301 redirects let browsers cache the mapping client-side for maximum throughput.",
+      "javaImpl": "public String resolve(String alias) {\n    String url = redis.get(alias);\n    if (url != null) return url;\n    \n    UrlMapping mapping = db.findByAlias(alias);\n    if (mapping == null) throw new NotFoundException();\n    \n    long ttl = mapping.getExpiresAt() - Instant.now().getEpochSecond();\n    if (ttl > 0) redis.setex(alias, ttl, mapping.getLongUrl());\n    return mapping.getLongUrl();\n}"
+    },
+    {
+      "componentId": "shortener",
+      "heading": "Write Path — Shortener Service",
+      "detail": "Accepts long URL, generates alias, persists to Postgres. Handles custom aliases with uniqueness check. Publishes creation event for analytics.",
+      "javaImpl": "@PostMapping(\"/shorten\")\npublic ResponseEntity<ShortenResponse> shorten(@RequestBody ShortenRequest req) {\n    String alias = req.getCustomAlias() != null\n        ? req.getCustomAlias()\n        : base62Encode(idGenerator.nextId());\n    \n    db.save(new UrlMapping(alias, req.getLongUrl(),\n        Instant.now().plus(req.getTtlDays(), DAYS)));\n    \n    return ResponseEntity.status(201)\n        .body(new ShortenResponse(\"https://short.ly/\" + alias));\n}"
+    }
+  ]
+}

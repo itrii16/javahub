@@ -1,0 +1,51 @@
+{
+  "id": "cache-service",
+  "title": "Distributed Cache Service",
+  "description": "Design a distributed in-memory cache service (like Redis or Memcached) with LRU eviction, consistent hashing, and replication.",
+  "requirements": [
+    "GET and SET operations with optional TTL",
+    "LRU eviction when memory limit is reached",
+    "Consistent hashing for key distribution across nodes",
+    "Replication to at least one replica node per shard",
+    "Support cache-aside, write-through, and write-behind patterns"
+  ],
+  "nonFunctionalReqs": [
+    "< 1ms GET/SET latency P99 for in-memory hits",
+    "Linear horizontal scalability (add nodes seamlessly)",
+    "Survive single node failure with < 100ms failover",
+    "99.99% availability"
+  ],
+  "components": [
+    { "id": "client",    "label": "Client",             "x": 20,  "y": 180, "width": 100, "height": 50, "shape": "rect",     "javaNote": "Application using the cache client library. Client library implements consistent hashing to route keys to correct node. Handles retry on node failure. Popular: Jedis (Redis), Memcached Java client, or custom." },
+    { "id": "cache-svc", "label": "Cache Service",      "x": 165, "y": 180, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Core cache node. Uses a ConcurrentHashMap for O(1) lookup + doubly linked list for LRU order tracking. GET: move node to head (O(1)). SET: add to head, evict tail if capacity exceeded. All operations thread-safe with fine-grained locking (stripe by key hash)." },
+    { "id": "eviction",  "label": "Eviction Manager",   "x": 340, "y": 80,  "width": 120, "height": 50, "shape": "diamond", "javaNote": "Background thread runs every 100ms. Two passes: (1) passive — check TTL on accessed keys; (2) active — sample 20 random keys, evict expired, repeat until <25% are expired. Same strategy as Redis. LRU eviction triggered synchronously on SET when memory > maxMemoryMB." },
+    { "id": "backing",   "label": "Backing Store (DB)", "x": 340, "y": 280, "width": 120, "height": 50, "shape": "cylinder", "javaNote": "Source of truth. Cache-aside: app reads DB on miss and populates cache. Write-through: write to cache + DB synchronously on SET. Write-behind (write-back): write to cache immediately, flush to DB asynchronously in batches. Write-behind risks data loss on crash." },
+    { "id": "replica",   "label": "Replication Node",   "x": 515, "y": 180, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Each primary shard has 1+ replicas. Replication is asynchronous — primary acks client after writing to its own memory. Replica applies changes from replication log. On primary failure: replica promoted (leader election via Zookeeper or Raft). Reads can serve from replicas to distribute load." }
+  ],
+  "connections": [
+    { "from": "client",    "to": "cache-svc", "label": "GET / SET" },
+    { "from": "cache-svc", "to": "eviction",  "label": "TTL / LRU" },
+    { "from": "cache-svc", "to": "backing",   "label": "cache miss / write" },
+    { "from": "cache-svc", "to": "replica",   "label": "async replicate" }
+  ],
+  "componentBreakdown": [
+    {
+      "componentId": "cache-svc",
+      "heading": "LRU Implementation with LinkedHashMap",
+      "detail": "Java LinkedHashMap with accessOrder=true automatically maintains LRU order. Override removeEldestEntry to evict when size exceeds capacity. Wrap in Collections.synchronizedMap or use ConcurrentLinkedHashMap (Guava Cache) for thread safety.",
+      "javaImpl": "public class LRUCache<K, V> {\n    private final int capacity;\n    private final Map<K, V> cache;\n    \n    public LRUCache(int capacity) {\n        this.capacity = capacity;\n        this.cache = Collections.synchronizedMap(\n            new LinkedHashMap<>(capacity, 0.75f, true) {\n                @Override\n                protected boolean removeEldestEntry(Map.Entry<K,V> eldest) {\n                    return size() > capacity;\n                }\n            }\n        );\n    }\n    \n    public V get(K key) { return cache.get(key); }\n    public void put(K key, V value) { cache.put(key, value); }\n}"
+    },
+    {
+      "componentId": "client",
+      "heading": "Consistent Hashing for Node Routing",
+      "detail": "Consistent hashing maps keys to a ring of virtual nodes. Adding/removing a node only remaps ~1/N keys (vs 100% with modulo hashing). Each physical node has 150-300 virtual nodes on the ring for even distribution.",
+      "javaImpl": "public class ConsistentHashRouter<T> {\n    private final TreeMap<Long, T> ring = new TreeMap<>();\n    private final int virtualNodes;\n    \n    public void addNode(T node) {\n        for (int i = 0; i < virtualNodes; i++) {\n            long hash = hash(node.toString() + \":\" + i);\n            ring.put(hash, node);\n        }\n    }\n    \n    public T route(String key) {\n        long hash = hash(key);\n        Map.Entry<Long, T> entry = ring.ceilingEntry(hash);\n        return entry != null ? entry.getValue() : ring.firstEntry().getValue();\n    }\n    \n    private long hash(String s) {\n        return Hashing.murmur3_128().hashString(s, UTF_8).asLong();\n    }\n}"
+    },
+    {
+      "componentId": "eviction",
+      "heading": "Thundering Herd Problem",
+      "detail": "When a popular cached item expires, many concurrent requests hit the DB simultaneously. Solutions: (1) Cache locking — only one request fetches, others wait. (2) Probabilistic early expiration — refresh before expiry. (3) Stale-while-revalidate — return stale data while refreshing async.",
+      "javaImpl": "// Cache locking with Redis to prevent thundering herd\npublic String getWithLock(String key) {\n    String value = redis.get(key);\n    if (value != null) return value;\n    \n    String lockKey = \"lock:\" + key;\n    boolean locked = redis.setnx(lockKey, \"1\") == 1;\n    redis.expire(lockKey, 5); // 5s lock timeout\n    \n    if (locked) {\n        try {\n            value = db.fetch(key);\n            redis.setex(key, TTL, value);\n        } finally {\n            redis.del(lockKey);\n        }\n    } else {\n        // Wait and retry\n        Thread.sleep(50);\n        value = redis.get(key); // now populated by lock holder\n    }\n    return value;\n}"
+    }
+  ]
+}
