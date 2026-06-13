@@ -84,7 +84,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 ### F6 — Full Progress Dashboard (Phase 5)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T29 | Full dashboard: radar chart, quiz history chart, study plan progress, sync nudge | ⬜ Pending |
+| T29 | Full dashboard: radar chart, quiz history chart, study plan progress, sync nudge | ✅ Done |
 
 ### F7 — Search (Phase 6)
 | Ticket | Description | Status |

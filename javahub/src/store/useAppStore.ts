@@ -48,6 +48,9 @@ interface AppStore extends AppProgress {
   // Interview prep
   interviewPrepStatus: Record<string, PrepStatus>
   setPrepStatus: (topicId: string, status: PrepStatus) => void
+  // Sync nudge
+  syncNudgeDismissed: boolean
+  dismissSyncNudge: () => void
 }
 
 export const useAppStore = create<AppStore>()(
@@ -85,6 +88,8 @@ export const useAppStore = create<AppStore>()(
           interviewPrepStatus: { ...state.interviewPrepStatus, [topicId]: status },
         }))
       },
+      syncNudgeDismissed: false,
+      dismissSyncNudge: () => set({ syncNudgeDismissed: true }),
 
 
       startAssessment: () => {
