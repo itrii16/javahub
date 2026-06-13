@@ -72,7 +72,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 ### F4 — Cheat Sheets (Phase 3)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T25 | Cheat sheets: 8 sheets (data + UI), copy + print buttons | ⬜ Pending |
+| T25 | Cheat sheets: 8 sheets (data + UI), copy + print buttons | ✅ Done |
 
 ### F5 — Interview Prep Track (Phase 1.5 + Phase 5)
 | Ticket | Description | Status |

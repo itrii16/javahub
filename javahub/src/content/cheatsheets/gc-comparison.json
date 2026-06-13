@@ -1,0 +1,39 @@
+{
+  "id": "gc-comparison",
+  "title": "JVM Garbage Collectors",
+  "topicId": "jvm-internals",
+  "sections": [
+    {
+      "title": "GC Comparison",
+      "table": {
+        "headers": ["GC", "Java version", "Pause type", "Best for", "Key JVM flags"],
+        "rows": [
+          { "label": "Serial GC", "columns": ["All", "Stop-the-world (single thread)", "Single-core, small heaps (<100 MB)", "-XX:+UseSerialGC"] },
+          { "label": "Parallel GC", "columns": ["All (default <Java 9)", "Stop-the-world (multi-thread)", "Batch jobs, throughput-first, multi-core", "-XX:+UseParallelGC -XX:ParallelGCThreads=N"] },
+          { "label": "G1 GC", "columns": ["Java 9+ (default)", "Short concurrent + short STW", "Large heaps (>4 GB), balanced throughput+latency", "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"] },
+          { "label": "ZGC", "columns": ["Java 15+ (production)", "Sub-millisecond, fully concurrent", "Very large heaps, latency-sensitive (< 1ms pauses)", "-XX:+UseZGC"] },
+          { "label": "Shenandoah", "columns": ["Java 15+ (OpenJDK)", "Concurrent compaction, low-pause", "Large heaps with predictable latency", "-XX:+UseShenandoahGC"] },
+          { "label": "Epsilon GC", "columns": ["Java 11+", "No GC (allocate only)", "Testing, short-lived apps, benchmarking", "-XX:+UseEpsilonGC"] }
+        ]
+      }
+    },
+    {
+      "title": "GC Tuning Quick Reference",
+      "table": {
+        "headers": ["Flag", "Description", "Example"],
+        "rows": [
+          { "label": "-Xms / -Xmx", "columns": ["Initial / max heap size", "-Xms512m -Xmx2g"] },
+          { "label": "-Xss", "columns": ["Thread stack size", "-Xss256k"] },
+          { "label": "-XX:NewRatio", "columns": ["Old:Young generation ratio", "-XX:NewRatio=2 (old is 2× young)"] },
+          { "label": "-XX:SurvivorRatio", "columns": ["Eden:Survivor ratio", "-XX:SurvivorRatio=8 (eden = 8× survivor)"] },
+          { "label": "-XX:+PrintGCDetails", "columns": ["Verbose GC output", "Pipe to GC log analyser"] },
+          { "label": "-XX:+HeapDumpOnOutOfMemoryError", "columns": ["Dump heap on OOM", "Analyse with Eclipse MAT / jmap"] }
+        ]
+      }
+    },
+    {
+      "title": "When to choose which GC",
+      "content": "Default (Java 9+): G1 — good balance for most apps. Latency-critical microservices (<10ms pause target): ZGC or Shenandoah. Batch/throughput jobs: Parallel GC. Very small apps / embedded: Serial GC. Benchmarking (eliminate GC from measurements): Epsilon GC. Upgrade path: Serial → Parallel → G1 → ZGC/Shenandoah."
+    }
+  ]
+}

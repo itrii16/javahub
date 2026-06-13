@@ -1,0 +1,31 @@
+{
+  "id": "collections",
+  "title": "Java Collections",
+  "topicId": "collections",
+  "sections": [
+    {
+      "title": "Collections Comparison",
+      "table": {
+        "headers": ["Class", "Interface", "Ordered?", "Sorted?", "Null keys?", "Thread-safe?", "Get/Put/Contains"],
+        "rows": [
+          { "label": "ArrayList", "columns": ["List", "Yes (index)", "No", "Yes (element)", "No", "O(1) / O(1) amort / O(n)"] },
+          { "label": "LinkedList", "columns": ["List, Deque", "Yes (insertion)", "No", "Yes", "No", "O(n) / O(1) at ends / O(n)"] },
+          { "label": "HashMap", "columns": ["Map", "No", "No", "1 null key", "No", "O(1) avg / O(1) avg / O(1) avg"] },
+          { "label": "LinkedHashMap", "columns": ["Map", "Yes (insertion/access)", "No", "1 null key", "No", "O(1) / O(1) / O(1)"] },
+          { "label": "TreeMap", "columns": ["NavigableMap", "Yes (key order)", "Yes (natural/Comparator)", "No", "No", "O(log n) all"] },
+          { "label": "HashSet", "columns": ["Set", "No", "No", "Yes (one null)", "No", "— / O(1) / O(1)"] },
+          { "label": "LinkedHashSet", "columns": ["Set", "Yes (insertion)", "No", "Yes (one null)", "No", "— / O(1) / O(1)"] },
+          { "label": "TreeSet", "columns": ["NavigableSet", "Yes (sorted)", "Yes", "No", "No", "— / O(log n) / O(log n)"] },
+          { "label": "ArrayDeque", "columns": ["Deque, Queue", "Yes", "No", "No", "No", "O(1) ends / O(1) / O(n)"] },
+          { "label": "PriorityQueue", "columns": ["Queue", "Heap order", "Min-heap", "No", "No", "peek O(1) / O(log n) / O(n)"] },
+          { "label": "ConcurrentHashMap", "columns": ["ConcurrentMap", "No", "No", "No null keys", "Yes (segment locks)", "O(1) avg / O(1) avg / O(1) avg"] },
+          { "label": "CopyOnWriteArrayList", "columns": ["List", "Yes (index)", "No", "Yes", "Yes (read-optimised)", "O(1) / O(n) / O(n)"] }
+        ]
+      }
+    },
+    {
+      "title": "Choosing the right collection",
+      "content": "List (ordered, duplicates): ArrayList for random access, LinkedList for frequent head/tail insert. Set (unique): HashSet for O(1), LinkedHashSet for insertion order, TreeSet for sorted. Map: HashMap for O(1), TreeMap for sorted keys, LinkedHashMap for LRU caches. Queue/Stack: ArrayDeque for both (prefer over Stack/LinkedList). Thread-safe: ConcurrentHashMap, CopyOnWriteArrayList, or Collections.synchronizedXxx()."
+    }
+  ]
+}

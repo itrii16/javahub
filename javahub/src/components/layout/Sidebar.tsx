@@ -108,6 +108,20 @@ export default function Sidebar({ onNavigate }: Props) {
         )
       })}
 
+      {/* Cheat Sheets section */}
+      <div className="mb-4 mt-2">
+        <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-widest text-gray-500">
+          Reference
+        </p>
+        <Link
+          to="/cheatsheets"
+          onClick={onNavigate}
+          className="block px-4 py-2.5 text-sm text-gray-300 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+        >
+          Cheat Sheets
+        </Link>
+      </div>
+
       {/* Interview Prep section */}
       <div className="mb-4 mt-2">
         <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-widest text-gray-500">

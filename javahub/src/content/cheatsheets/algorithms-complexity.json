@@ -1,0 +1,37 @@
+{
+  "id": "algorithms-complexity",
+  "title": "Sorting Algorithms Cheat Sheet",
+  "topicId": "algorithms",
+  "sections": [
+    {
+      "title": "Sorting Algorithms",
+      "table": {
+        "headers": ["Algorithm", "Best", "Average", "Worst", "Space", "Stable?", "In-place?", "Notes"],
+        "rows": [
+          { "label": "TimSort", "columns": ["O(n)", "O(n log n)", "O(n log n)", "O(n)", "Yes", "No", "Java default (Arrays.sort on objects). Hybrid Merge+Insertion."] },
+          { "label": "Quicksort", "columns": ["O(n log n)", "O(n log n)", "O(n²)", "O(log n)", "No", "Yes", "Java default (Arrays.sort on primitives). Pivot selection matters."] },
+          { "label": "Mergesort", "columns": ["O(n log n)", "O(n log n)", "O(n log n)", "O(n)", "Yes", "No", "Guaranteed O(n log n). Good for linked lists. Used in TimSort."] },
+          { "label": "Heapsort", "columns": ["O(n log n)", "O(n log n)", "O(n log n)", "O(1)", "No", "Yes", "In-place, no worst-case degradation. Poor cache locality."] },
+          { "label": "Insertion Sort", "columns": ["O(n)", "O(n²)", "O(n²)", "O(1)", "Yes", "Yes", "Best for small/nearly sorted arrays. Used in TimSort for small runs."] },
+          { "label": "Counting Sort", "columns": ["O(n+k)", "O(n+k)", "O(n+k)", "O(k)", "Yes", "No", "k = value range. Linear time but only for small integer ranges."] },
+          { "label": "Radix Sort", "columns": ["O(nk)", "O(nk)", "O(nk)", "O(n+k)", "Yes", "No", "k = number of digits/characters. Linear for fixed-width integers."] },
+          { "label": "Bucket Sort", "columns": ["O(n+k)", "O(n+k)", "O(n²)", "O(n+k)", "Yes", "No", "Uniform distribution assumption. Worst case if all in one bucket."] }
+        ]
+      }
+    },
+    {
+      "title": "Common Search Algorithms",
+      "table": {
+        "headers": ["Algorithm", "Time", "Space", "Requirement", "Java usage"],
+        "rows": [
+          { "label": "Linear Search", "columns": ["O(n)", "O(1)", "None", "List.contains(), unsorted array scan"] },
+          { "label": "Binary Search", "columns": ["O(log n)", "O(1) iterative", "Sorted array", "Arrays.binarySearch(), Collections.binarySearch()"] },
+          { "label": "BFS", "columns": ["O(V+E)", "O(V)", "Graph/tree", "Shortest path (unweighted), level-order traversal"] },
+          { "label": "DFS", "columns": ["O(V+E)", "O(V)", "Graph/tree", "Cycle detection, topological sort, connected components"] },
+          { "label": "Dijkstra", "columns": ["O((V+E) log V)", "O(V)", "Non-negative weights", "Shortest path in weighted graph; use PriorityQueue"] },
+          { "label": "A*", "columns": ["O(E)", "O(V)", "Admissible heuristic", "Pathfinding with heuristic guidance (games, maps)"] }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "design-patterns",
+  "title": "Design Patterns",
+  "topicId": "design-patterns",
+  "sections": [
+    {
+      "title": "Creational Patterns",
+      "table": {
+        "headers": ["Pattern", "Intent", "Use when", "Java example"],
+        "rows": [
+          { "label": "Singleton", "columns": ["One instance, global access", "App config, connection pool, logger", "Enum or double-checked locking"] },
+          { "label": "Factory Method", "columns": ["Subclass decides which object to create", "Decouple object creation from usage", "LoggerFactory.getLogger()"] },
+          { "label": "Abstract Factory", "columns": ["Create families of related objects", "UI toolkit, cross-platform components", "DocumentBuilderFactory"] },
+          { "label": "Builder", "columns": ["Step-by-step object construction", "Complex objects with many optional params", "StringBuilder, Lombok @Builder"] },
+          { "label": "Prototype", "columns": ["Clone existing objects", "Expensive to construct from scratch", "Object.clone(), copy constructors"] }
+        ]
+      }
+    },
+    {
+      "title": "Structural Patterns",
+      "table": {
+        "headers": ["Pattern", "Intent", "Use when", "Java example"],
+        "rows": [
+          { "label": "Adapter", "columns": ["Make incompatible interfaces work together", "Wrapping legacy code / 3rd-party libs", "Arrays.asList(), InputStreamReader"] },
+          { "label": "Decorator", "columns": ["Add behaviour without subclassing", "Runtime composition of features", "BufferedInputStream, Java I/O streams"] },
+          { "label": "Facade", "columns": ["Simplified interface to a subsystem", "Hide complexity (e.g. Spring's JdbcTemplate)", "SLF4J, Spring Cache abstraction"] },
+          { "label": "Proxy", "columns": ["Surrogate that controls access", "Lazy init, security, logging, AOP", "Spring AOP, JDK Proxy, CGLIB"] },
+          { "label": "Composite", "columns": ["Treat tree of objects uniformly", "File system, GUI trees", "java.awt.Component hierarchy"] },
+          { "label": "Bridge", "columns": ["Decouple abstraction from implementation", "Multiple orthogonal dimensions of variation", "JDBC Driver + Connection"] }
+        ]
+      }
+    },
+    {
+      "title": "Behavioural Patterns",
+      "table": {
+        "headers": ["Pattern", "Intent", "Use when", "Java example"],
+        "rows": [
+          { "label": "Strategy", "columns": ["Swap algorithms at runtime", "Multiple algorithms for same task", "Comparator, Collections.sort()"] },
+          { "label": "Observer", "columns": ["Notify dependents of state change", "Event systems, reactive pipelines", "EventListener, RxJava, Spring events"] },
+          { "label": "Command", "columns": ["Encapsulate request as object", "Undo/redo, queuing, transactions", "Runnable, Spring @Async"] },
+          { "label": "Template Method", "columns": ["Define skeleton; subclasses fill steps", "Framework hooks (Spring lifecycle)", "AbstractList, HttpServlet.service()"] },
+          { "label": "Iterator", "columns": ["Sequential access without exposing internals", "All Java collections", "java.util.Iterator, for-each"] },
+          { "label": "Chain of Responsibility", "columns": ["Pass request along a chain of handlers", "Middleware, filter pipelines", "Servlet filters, Spring Security"] },
+          { "label": "State", "columns": ["Behaviour changes with internal state", "Order status machine, UI state", "Thread states (NEW/RUNNABLE/WAITING)"] }
+        ]
+      }
+    }
+  ]
+}
