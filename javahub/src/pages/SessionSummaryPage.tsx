@@ -92,9 +92,8 @@ export default function SessionSummaryPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="text-center mb-8">
-        <p className="text-4xl mb-3">✅</p>
-        <h1 className="text-2xl font-bold text-gray-100 mb-1">Session complete</h1>
-        <p className="text-gray-400">{topic.title}</p>
+        <h1 className="text-xl font-semibold text-gray-100 mb-1">Session complete</h1>
+        <p className="text-sm text-gray-500">{topic.title}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -130,8 +129,8 @@ export default function SessionSummaryPage() {
 
       {reviewCards.length > 0 && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
-          <h2 className="text-sm font-semibold text-yellow-400 mb-3">
-            ↺ Review these cards ({reviewCards.length})
+          <h2 className="text-sm font-semibold text-gray-300 mb-3">
+            Review these ({reviewCards.length})
           </h2>
           <ul className="space-y-2">
             {reviewCards.map(({ result, card }) => (

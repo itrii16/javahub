@@ -52,7 +52,7 @@ export default function QuizResultsPage() {
           <span className={`inline-block mt-2 px-4 py-1 rounded-full text-sm font-medium ${
             passed ? 'bg-green-900/40 text-green-400' : 'bg-red-900/40 text-red-400'
           }`}>
-            {passed ? 'Passed ✓' : 'Keep practicing'}
+            {passed ? 'Passed' : 'Keep practicing'}
           </span>
         </div>
 
@@ -70,9 +70,9 @@ export default function QuizResultsPage() {
                 <div key={q.id} className="bg-red-900/10 border border-red-900/30 rounded-xl p-5 space-y-3">
                   <p className="text-gray-100 font-medium">{q.question}</p>
                   {selected && (
-                    <p className="text-sm text-red-400">✗ Your answer: {selected.text}</p>
+                    <p className="text-sm text-red-400">Your answer: {selected.text}</p>
                   )}
-                  <p className="text-sm text-green-400">✓ Correct: {correct.text}</p>
+                  <p className="text-sm text-green-400">Correct: {correct.text}</p>
                   <p className="text-sm text-gray-400 leading-relaxed">{q.explanation}</p>
                   {subtopicCards && (
                     <Link

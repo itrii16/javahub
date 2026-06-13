@@ -35,9 +35,9 @@ export default function TopicPage() {
 
   if (!topic) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-        <p className="text-lg mb-4">Topic not found.</p>
-        <Link to="/" className="text-indigo-400 hover:text-indigo-300">← Back to Home</Link>
+      <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+        <p className="text-sm mb-4">Topic not found.</p>
+        <Link to="/" className="text-indigo-400 hover:text-indigo-300 text-sm">← Back to home</Link>
       </div>
     )
   }
@@ -49,51 +49,51 @@ export default function TopicPage() {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Topic header */}
-      <div className="mb-6">
-        <div className="mb-2">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{topic.group}</p>
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-100">{topic.title}</h1>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Link
-                to={`/topic/${topic.id}/quiz`}
-                className="px-3 py-1.5 md:px-4 md:py-2 border border-indigo-500 text-indigo-400 hover:bg-indigo-500/10 text-sm font-medium rounded-lg transition-colors"
-              >
-                Take Quiz
-              </Link>
-              <Link
-                to={`/topic/${topic.id}/study`}
-                className="px-3 py-1.5 md:px-4 md:py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                Study →
-              </Link>
-            </div>
+      <div className="mb-8">
+        <p className="text-[11px] text-gray-600 uppercase tracking-[0.07em] mb-1">{topic.group}</p>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-xl font-semibold text-gray-100">{topic.title}</h1>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              to={`/topic/${topic.id}/quiz`}
+              className="px-3 py-1.5 border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 text-sm rounded-lg transition-colors"
+            >
+              Quiz
+            </Link>
+            <Link
+              to={`/topic/${topic.id}/study`}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg transition-colors"
+            >
+              Study
+            </Link>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-sm text-gray-400 flex-wrap">
-          <span>⏱ ~{topic.estimatedMinutes} min</span>
+
+        <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
           <span>{allCards.length} cards</span>
           <span>{masteredCount} mastered</span>
+          <span>~{topic.estimatedMinutes} min</span>
         </div>
-        <div className="mt-3 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+
+        <div className="mt-3 h-px bg-gray-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-indigo-500 rounded-full transition-all"
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        <p className="mt-1 text-xs text-gray-500">{progressPct}% mastered</p>
+        <p className="mt-1.5 text-[11px] text-gray-600">{progressPct}% mastered</p>
       </div>
 
-      {/* Difficulty filter — scrollable on mobile */}
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+      {/* Filters */}
+      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
         {DIFFICULTIES.map(d => (
           <button
             key={d}
             onClick={() => setDifficultyFilter(d)}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               difficultyFilter === d
                 ? 'bg-indigo-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                : 'bg-gray-900 border border-gray-800 text-gray-500 hover:text-gray-300 hover:border-gray-700'
             }`}
           >
             {d !== 'All' && (
@@ -104,13 +104,13 @@ export default function TopicPage() {
         ))}
         <button
           onClick={() => topic && toggleGuidedPath(topic.id)}
-          className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
             isGuidedPath
               ? 'bg-indigo-600 text-white'
-              : 'bg-gray-800 text-gray-400 hover:text-gray-200'
+              : 'bg-gray-900 border border-gray-800 text-gray-500 hover:text-gray-300 hover:border-gray-700'
           }`}
         >
-          {isGuidedPath ? '🔒 Guided path on' : '📖 Guided path'}
+          Guided path
         </button>
       </div>
 
@@ -121,8 +121,8 @@ export default function TopicPage() {
         )
         if (filtered.length === 0) return null
         return (
-          <section key={subtopic.id} id={subtopic.id} className="mb-8">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 pb-2 border-b border-gray-800">
+          <section key={subtopic.id} id={subtopic.id} className="mb-10">
+            <h2 className="text-[11px] font-semibold text-gray-600 uppercase tracking-[0.07em] mb-4 pb-2 border-b border-gray-800/60">
               {subtopic.title}
             </h2>
             <div className="flex flex-col gap-4">

@@ -114,11 +114,11 @@ export default function InterviewSimPage() {
             <p className="text-sm text-indigo-400 font-medium uppercase tracking-wide">F3 — Practice</p>
             <h1 className="text-3xl font-bold text-gray-100">Interview Simulation</h1>
           </div>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 text-left space-y-2 text-sm text-gray-400">
-            <p>📋 <span className="text-gray-200">30 questions</span> across all Java topics</p>
-            <p>⏱ <span className="text-gray-200">45-minute</span> countdown timer</p>
-            <p>🔇 <span className="text-gray-200">No feedback</span> during the quiz — results at the end</p>
-            <p>📄 <span className="text-gray-200">Downloadable PDF</span> report on completion</p>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 text-left space-y-2.5 text-sm text-gray-500">
+            <p><span className="text-gray-300">30 questions</span> across all Java topics</p>
+            <p><span className="text-gray-300">45-minute</span> countdown timer</p>
+            <p><span className="text-gray-300">No feedback</span> during the quiz — results at the end</p>
+            <p><span className="text-gray-300">Downloadable PDF</span> report on completion</p>
           </div>
           <button
             onClick={handleStart}
