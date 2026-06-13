@@ -1,0 +1,287 @@
+{
+  "lastUpdated": "2025-09-01",
+  "releases": [
+    {
+      "version": 8,
+      "releaseDate": "2014-03-18",
+      "isLts": true,
+      "summary": "The lambda revolution — functional programming comes to Java.",
+      "majorFeatures": [
+        "Lambda expressions and functional interfaces",
+        "Stream API for declarative data processing",
+        "Optional<T> for null-safe values",
+        "Default and static interface methods",
+        "Date/Time API (java.time — JSR-310)",
+        "CompletableFuture for async composition",
+        "Nashorn JavaScript engine",
+        "Base64 encoding/decoding in standard library"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 126,
+          "title": "Lambda Expressions & Virtual Extension Methods",
+          "plainEnglishSummary": "Write anonymous functions inline instead of single-method anonymous classes. list.forEach(s -> System.out.println(s)) instead of a full anonymous Runnable.",
+          "codeExample": "// Before Java 8\nlist.sort(new Comparator<String>() {\n    public int compare(String a, String b) { return a.compareTo(b); }\n});\n\n// Java 8 lambda\nlist.sort((a, b) -> a.compareTo(b));\n\n// Method reference\nlist.sort(String::compareTo);\n\n// Stream pipeline\nlong count = list.stream()\n    .filter(s -> s.startsWith(\"A\"))\n    .map(String::toUpperCase)\n    .count();",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 8
+        }
+      ]
+    },
+    {
+      "version": 9,
+      "releaseDate": "2017-09-21",
+      "isLts": false,
+      "summary": "Modularity for the JDK and your code with Project Jigsaw.",
+      "majorFeatures": [
+        "Java Platform Module System (JPMS / Project Jigsaw)",
+        "JShell — interactive REPL",
+        "Collection factory methods: List.of(), Set.of(), Map.of()",
+        "Stream enhancements: takeWhile, dropWhile, iterate",
+        "Optional.stream() and ifPresentOrElse()",
+        "Private interface methods",
+        "HTTP/2 Client (incubating)"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 261,
+          "title": "Module System",
+          "plainEnglishSummary": "Divide the JDK and your application into modules with explicit dependencies and exported packages. Reduces classpath hell and improves security by hiding implementation packages.",
+          "codeExample": "// module-info.java\nmodule com.myapp.core {\n    requires java.net.http;       // explicit dependency\n    requires com.google.gson;\n    exports com.myapp.api;        // only this package visible to other modules\n    // com.myapp.internal stays hidden\n}\n\n// List.of / Map.of factory methods\nList<String> immutable = List.of(\"a\", \"b\", \"c\");\nMap<String, Integer> scores = Map.of(\"Alice\", 95, \"Bob\", 87);",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 9
+        }
+      ]
+    },
+    {
+      "version": 10,
+      "releaseDate": "2018-03-20",
+      "isLts": false,
+      "summary": "Local variable type inference with var — less boilerplate, same safety.",
+      "majorFeatures": [
+        "var — local variable type inference (JEP 286)",
+        "Unmodifiable collection copies: List.copyOf(), Map.copyOf()",
+        "Optional.orElseThrow() — clearer NoSuchElementException intent",
+        "Parallel full GC for G1"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 286,
+          "title": "Local-Variable Type Inference",
+          "plainEnglishSummary": "Use var instead of writing out the full type for local variables. The compiler still knows the type — this is not dynamic typing. Works for local variables and for-loop variables only.",
+          "codeExample": "// Without var\nMap<String, List<Integer>> map = new HashMap<String, List<Integer>>();\n\n// With var — compiler infers Map<String, List<Integer>>\nvar map = new HashMap<String, List<Integer>>();\n\n// In for-each\nfor (var entry : map.entrySet()) {\n    System.out.println(entry.getKey() + \": \" + entry.getValue());\n}\n\n// NOT allowed: var for fields, method params, or return types",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 10
+        }
+      ]
+    },
+    {
+      "version": 11,
+      "releaseDate": "2018-09-25",
+      "isLts": true,
+      "summary": "LTS with the new HTTP Client, String enhancements, and single-file execution.",
+      "majorFeatures": [
+        "HTTP Client API (standard, replaces deprecated HttpURLConnection pattern)",
+        "String::isBlank, strip, stripLeading, stripTrailing, repeat, lines",
+        "Run single Java source files: java Hello.java without javac",
+        "var in lambda parameters",
+        "Files.readString() / writeString() convenience methods",
+        "Epsilon GC (no-op, for benchmarking)",
+        "Flight Recorder open-sourced (JEP 328)"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 321,
+          "title": "HTTP Client",
+          "plainEnglishSummary": "A modern HTTP client supporting HTTP/2, WebSocket, and async/sync modes. Replaces the clunky HttpURLConnection with a clean builder-style API.",
+          "codeExample": "HttpClient client = HttpClient.newBuilder()\n    .connectTimeout(Duration.ofSeconds(10))\n    .build();\n\nHttpRequest request = HttpRequest.newBuilder()\n    .uri(URI.create(\"https://api.example.com/users\"))\n    .header(\"Accept\", \"application/json\")\n    .GET()\n    .build();\n\n// Synchronous\nHttpResponse<String> response =\n    client.send(request, BodyHandlers.ofString());\nSystem.out.println(response.statusCode()); // 200\n\n// Async\nclient.sendAsync(request, BodyHandlers.ofString())\n    .thenApply(HttpResponse::body)\n    .thenAccept(System.out::println);",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 11
+        }
+      ]
+    },
+    {
+      "version": 14,
+      "releaseDate": "2020-03-17",
+      "isLts": false,
+      "summary": "Records arrive in preview; switch expressions become standard.",
+      "majorFeatures": [
+        "Records — immutable data classes (preview, JEP 359)",
+        "Switch expressions — standard (JEP 361)",
+        "Helpful NullPointerExceptions (NPE messages show exactly which ref was null)",
+        "Pattern matching for instanceof (preview, JEP 305)",
+        "Text blocks (preview)"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 361,
+          "title": "Switch Expressions",
+          "plainEnglishSummary": "Switch can now be an expression (returns a value) with the arrow syntax. No more fall-through bugs and no more forgetting break.",
+          "codeExample": "// Old switch statement (fall-through risk)\nint numLetters;\nswitch (day) {\n    case MONDAY: case FRIDAY: case SUNDAY: numLetters = 6; break;\n    case TUESDAY: numLetters = 7; break;\n    default: numLetters = 9;\n}\n\n// New switch expression — exhaustive, no fall-through\nint numLetters = switch (day) {\n    case MONDAY, FRIDAY, SUNDAY -> 6;\n    case TUESDAY                -> 7;\n    case THURSDAY, SATURDAY     -> 8;\n    case WEDNESDAY              -> 9;\n};\n\n// With yield for multi-statement arms\nString result = switch (status) {\n    case OK -> \"Success\";\n    case ERROR -> {\n        log.warn(\"error\");\n        yield \"Failed\";\n    }\n};",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 14
+        }
+      ]
+    },
+    {
+      "version": 15,
+      "releaseDate": "2020-09-15",
+      "isLts": false,
+      "summary": "Sealed classes in preview; text blocks become standard.",
+      "majorFeatures": [
+        "Text blocks — standard (JEP 378)",
+        "Sealed classes — preview (JEP 360)",
+        "Hidden classes (JEP 371)",
+        "Records (second preview)",
+        "Pattern matching for instanceof (second preview)"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 378,
+          "title": "Text Blocks",
+          "plainEnglishSummary": "Multi-line string literals using triple quotes. No more string concatenation for JSON, SQL, or HTML. Indentation is automatically stripped based on the closing delimiter.",
+          "codeExample": "// Before: ugly string concatenation\nString json = \"{\\n\" +\n    \"  \\\"name\\\": \\\"Alice\\\",\\n\" +\n    \"  \\\"age\\\": 30\\n\" +\n    \"}\";\n\n// After: text block\nString json = \"\"\"\n        {\n          \"name\": \"Alice\",\n          \"age\": 30\n        }\n        \"\"\";\n\nString sql = \"\"\"\n        SELECT u.id, u.name, o.total\n        FROM users u\n        JOIN orders o ON o.user_id = u.id\n        WHERE u.active = true\n        \"\"\";",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 15
+        }
+      ]
+    },
+    {
+      "version": 16,
+      "releaseDate": "2021-03-16",
+      "isLts": false,
+      "summary": "Records and pattern matching for instanceof graduate to standard.",
+      "majorFeatures": [
+        "Records — standard (JEP 395)",
+        "Pattern matching for instanceof — standard (JEP 394)",
+        "Sealed classes (second preview)",
+        "Unix-domain socket channels (JEP 380)",
+        "Stream.toList() shorthand"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 395,
+          "title": "Records",
+          "plainEnglishSummary": "Concise immutable data classes. The compiler auto-generates constructor, accessors, equals, hashCode, and toString from the record components. Perfect for DTOs and value objects.",
+          "codeExample": "// Record declaration — 1 line!\nrecord Point(int x, int y) {}\n\n// Compiler generates:\n// - canonical constructor Point(int x, int y)\n// - accessors: point.x(), point.y()\n// - equals, hashCode, toString\n\nPoint p = new Point(3, 4);\nSystem.out.println(p.x());    // 3\nSystem.out.println(p);        // Point[x=3, y=4]\n\n// Custom validation in compact constructor\nrecord Range(int lo, int hi) {\n    Range {\n        if (lo > hi) throw new IllegalArgumentException(lo + \" > \" + hi);\n    }\n}\n\n// Generic record\nrecord Pair<A, B>(A first, B second) {}",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 16
+        },
+        {
+          "jepNumber": 394,
+          "title": "Pattern Matching for instanceof",
+          "plainEnglishSummary": "Combine the instanceof check and cast into one operation. No more redundant cast after the check — the binding variable is available directly.",
+          "codeExample": "// Before Java 16\nif (obj instanceof String) {\n    String s = (String) obj; // redundant cast\n    System.out.println(s.length());\n}\n\n// Java 16+\nif (obj instanceof String s) {\n    System.out.println(s.length()); // s is String, no cast needed\n}\n\n// Combines naturally with &&\nif (obj instanceof Integer i && i > 0) {\n    System.out.println(\"Positive: \" + i);\n}",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 16
+        }
+      ]
+    },
+    {
+      "version": 17,
+      "releaseDate": "2021-09-14",
+      "isLts": true,
+      "summary": "LTS — sealed classes standard, strong encapsulation of JDK internals enforced.",
+      "majorFeatures": [
+        "Sealed classes and interfaces — standard (JEP 409)",
+        "Strong encapsulation of JDK internals — --illegal-access removed (JEP 403)",
+        "Pattern matching for switch (preview, JEP 406)",
+        "Foreign Function & Memory API (incubating)",
+        "Context-specific deserialization filters (JEP 415)"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 409,
+          "title": "Sealed Classes",
+          "plainEnglishSummary": "Restrict which classes can extend or implement a type. Enables exhaustive pattern matching and makes class hierarchies explicit. The sealed keyword + permits clause defines the closed set.",
+          "codeExample": "// Sealed interface — only these 3 types can implement it\nsealed interface Shape permits Circle, Rectangle, Triangle {}\n\nrecord Circle(double radius) implements Shape {}\nrecord Rectangle(double w, double h) implements Shape {}\nfinal class Triangle implements Shape { /* ... */ }\n\n// Compiler knows all cases — switch is exhaustive\ndouble area = switch (shape) {\n    case Circle c    -> Math.PI * c.radius() * c.radius();\n    case Rectangle r -> r.w() * r.h();\n    case Triangle t  -> /* ... */ 0;\n    // No default needed — compiler verifies exhaustiveness!\n};",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 17
+        }
+      ]
+    },
+    {
+      "version": 19,
+      "releaseDate": "2022-09-20",
+      "isLts": false,
+      "summary": "Virtual threads arrive in preview — Project Loom's breakthrough for scalable concurrency.",
+      "majorFeatures": [
+        "Virtual threads — preview (JEP 425, Project Loom)",
+        "Structured concurrency — incubating (JEP 428)",
+        "Record patterns — preview (JEP 405)",
+        "Foreign Function & Memory API (preview, JEP 424)"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 425,
+          "title": "Virtual Threads (Preview)",
+          "plainEnglishSummary": "Lightweight threads managed by the JVM rather than the OS. Create millions of them cheaply. Blocking operations (I/O, sleep) don't block the underlying OS thread — the JVM parks the virtual thread and reuses the carrier. Write blocking code that scales like async code.",
+          "codeExample": "// Create 100,000 virtual threads — no problem!\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    IntStream.range(0, 100_000).forEach(i -> executor.submit(() -> {\n        Thread.sleep(Duration.ofSeconds(1)); // doesn't block OS thread!\n        return i * 2;\n    }));\n} // waits for all tasks\n\n// Direct creation\nThread vt = Thread.ofVirtual().name(\"worker\").start(() -> {\n    System.out.println(\"Running on: \" + Thread.currentThread());\n});",
+          "status": "Preview",
+          "productionSafe": false,
+          "javaVersion": 19
+        }
+      ]
+    },
+    {
+      "version": 21,
+      "releaseDate": "2023-09-19",
+      "isLts": true,
+      "summary": "Current LTS — virtual threads standard, pattern matching complete, sequenced collections.",
+      "majorFeatures": [
+        "Virtual threads — standard (JEP 444, Project Loom)",
+        "Record patterns — standard (JEP 440)",
+        "Pattern matching for switch — standard (JEP 441)",
+        "Sequenced collections (JEP 431)",
+        "Structured concurrency — preview (JEP 453)",
+        "String templates — preview (JEP 430)"
+      ],
+      "jeps": [
+        {
+          "jepNumber": 444,
+          "title": "Virtual Threads",
+          "plainEnglishSummary": "Virtual threads are now production-ready. Millions of lightweight threads that block without consuming OS threads. Write simple blocking code (JDBC, HTTP calls) that scales like reactive code — no callback hell, no WebFlux, just plain Thread.sleep() and blocking I/O.",
+          "codeExample": "// Production-ready: one virtual thread per request (Spring Boot 3.2+ default)\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    List<Future<String>> results = IntStream.range(0, 10_000)\n        .mapToObj(i -> executor.submit(() -> fetchUser(i)))\n        .toList();\n    // 10,000 concurrent HTTP calls with blocking code!\n}\n\n// Spring Boot — just set in application.properties:\n// spring.threads.virtual.enabled=true\n// No code changes needed — Tomcat uses virtual threads automatically\n\n// Key rule: avoid synchronized blocks with long I/O\n// (pins the carrier thread) — use ReentrantLock instead\nvar lock = new ReentrantLock();\nlock.lock();\ntry { /* safe with virtual threads */ } finally { lock.unlock(); }",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 21
+        },
+        {
+          "jepNumber": 440,
+          "title": "Record Patterns",
+          "plainEnglishSummary": "Destructure record components directly in a pattern. Instead of calling accessors after a pattern match, extract the components inline. Composes with nested patterns for deep destructuring.",
+          "codeExample": "record Point(int x, int y) {}\nrecord Line(Point from, Point to) {}\n\n// Record pattern — destructure components\nObject obj = new Point(3, 4);\nif (obj instanceof Point(int x, int y)) {\n    System.out.println(\"x=\" + x + \", y=\" + y);\n}\n\n// Nested record patterns\nif (line instanceof Line(Point(int x1, int y1), Point(int x2, int y2))) {\n    double length = Math.hypot(x2 - x1, y2 - y1);\n}\n\n// In switch\ndouble area = switch (shape) {\n    case Circle(double r)       -> Math.PI * r * r;\n    case Rectangle(double w, double h) -> w * h;\n};",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 21
+        },
+        {
+          "jepNumber": 441,
+          "title": "Pattern Matching for switch",
+          "plainEnglishSummary": "Switch on any type (not just int/String/enum), with type patterns, guarded patterns, and exhaustiveness checking. Replaces chains of if-instanceof with readable, compiler-verified switch expressions.",
+          "codeExample": "sealed interface Expr permits Num, Add, Mul {}\nrecord Num(int value) implements Expr {}\nrecord Add(Expr left, Expr right) implements Expr {}\nrecord Mul(Expr left, Expr right) implements Expr {}\n\nint eval(Expr expr) {\n    return switch (expr) {\n        case Num(int v)         -> v;\n        case Add(var l, var r)  -> eval(l) + eval(r);\n        case Mul(var l, var r)  -> eval(l) * eval(r);\n        // No default — sealed hierarchy is exhaustive!\n    };\n}\n\n// Guarded patterns with when\nString classify(Object obj) {\n    return switch (obj) {\n        case Integer i when i < 0 -> \"negative\";\n        case Integer i            -> \"non-negative integer\";\n        case String s when s.isBlank() -> \"blank string\";\n        case String s             -> \"string: \" + s;\n        case null                 -> \"null\";\n        default                   -> \"other\";\n    };\n}",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 21
+        },
+        {
+          "jepNumber": 431,
+          "title": "Sequenced Collections",
+          "plainEnglishSummary": "A new SequencedCollection interface gives all ordered collections (List, Deque, LinkedHashSet, LinkedHashMap) a uniform API for accessing first and last elements, and getting a reversed view. No more different idioms for different types.",
+          "codeExample": "// Before Java 21 — different idioms for first/last\nlist.get(0);                          // List\ndeque.peekFirst();                    // Deque  \nlinkedHashSet.iterator().next();      // Set — awkward!\n\n// Java 21 — uniform SequencedCollection API\nlist.getFirst();          // List (new method)\nlist.getLast();           // List (new method)\ndeque.getFirst();         // Deque\nset.getFirst();           // LinkedHashSet — now works!\n\n// Reversed view (live, not a copy)\nList<Integer> nums = new ArrayList<>(List.of(1, 2, 3));\nList<Integer> rev = nums.reversed(); // [3, 2, 1]\n\n// SequencedMap: firstEntry(), lastEntry(), reversed()\nLinkedHashMap<String, Integer> map = new LinkedHashMap<>();\nmap.put(\"a\", 1); map.put(\"b\", 2);\nSystem.out.println(map.firstEntry()); // a=1\nSystem.out.println(map.lastEntry());  // b=2",
+          "status": "Finalized",
+          "productionSafe": true,
+          "javaVersion": 21
+        }
+      ]
+    }
+  ]
+}

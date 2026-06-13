@@ -126,6 +126,13 @@ export default function Sidebar({ onNavigate }: Props) {
         >
           Bookmarks & Notes
         </Link>
+        <Link
+          to="/java-news"
+          onClick={onNavigate}
+          className="block px-4 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+        >
+          Java News
+        </Link>
       </div>
 
       <div className="mb-5">
