@@ -16,6 +16,7 @@ import distributedSystems from './topics/distributed-systems.json'
 import securityBasics from './topics/security-basics.json'
 import loggingObservability from './topics/logging-observability.json'
 import systemDesign from './topics/system-design.json'
+import aiForEngineers from './topics/ai-for-engineers.json'
 
 export const topics: Topic[] = [
   javaCore,
@@ -35,6 +36,7 @@ export const topics: Topic[] = [
   securityBasics,
   loggingObservability,
   systemDesign,
+  aiForEngineers,
 ] as unknown as Topic[]
 
 export const topicMap: Record<string, Topic> = Object.fromEntries(

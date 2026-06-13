@@ -10,6 +10,7 @@ const GROUP_ORDER: TopicGroup[] = [
   'Data Structures',
   'Algorithms',
   'Interview & System Design',
+  'AI for Engineers',
 ]
 
 function groupTopics() {

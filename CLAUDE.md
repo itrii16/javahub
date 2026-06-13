@@ -112,6 +112,11 @@ Before committing, verify the following to catch integration gaps:
 |--------|-------------|--------|
 | T32 | Java news: timeline JSON (Java 8–21), What's New cards, version history page | ✅ Done |
 
+### F10 — AI for Engineers (Content Expansion)
+| Ticket | Description | Status |
+|--------|-------------|--------|
+| T33 | AI for Engineers topic: 8 subtopics × 3–4 cards — LLM fundamentals, prompt engineering, Claude & APIs, token management, AI frameworks, agents & MCP, RAG & embeddings, AI-assisted development | ✅ Done |
+
 ---
 
 ## Current project state (as of last update)
