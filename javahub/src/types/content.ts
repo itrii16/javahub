@@ -135,6 +135,27 @@ export interface CheatSheet {
   sections: CheatSheetSection[]
 }
 
+export interface InterviewAnswer {
+  summary: string
+  full: string
+}
+
+export interface TrickyFollowUp {
+  question: string
+  answer: string
+}
+
+export interface InterviewQuestion {
+  id: string
+  topicId: string
+  subtopicId?: string
+  question: string
+  tags: string[]
+  difficulty: Difficulty
+  answer: InterviewAnswer
+  trickyFollowUp?: TrickyFollowUp
+}
+
 export type UserLevel = 'Junior' | 'Mid' | 'Senior'
 
 export interface UserProfile {

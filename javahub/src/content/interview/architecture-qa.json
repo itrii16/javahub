@@ -1,0 +1,106 @@
+[
+  {
+    "id": "iq-arch-001",
+    "topicId": "api-design",
+    "subtopicId": "rest-vs-grpc",
+    "question": "What is the difference between REST and gRPC? When would you choose gRPC?",
+    "tags": ["REST", "gRPC", "API", "microservices"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "REST uses HTTP/1.1 + JSON, is human-readable, and great for public APIs. gRPC uses HTTP/2 + Protobuf binary encoding — faster, strongly typed, and supports bidirectional streaming. Choose gRPC for internal microservice communication with high throughput requirements.",
+      "full": "**REST:**\n- Transport: HTTP/1.1 (or HTTP/2)\n- Payload: JSON (human-readable, verbose)\n- Strongly typed: No (schema by convention, OpenAPI optional)\n- Streaming: Limited (Server-Sent Events, WebSockets separately)\n- Browser support: Native\n- Best for: Public APIs, external consumers, CRUD services\n\n**gRPC:**\n- Transport: HTTP/2 (multiplexed, connection reuse)\n- Payload: Protocol Buffers (binary, 5–10× smaller than JSON)\n- Strongly typed: Yes (`.proto` schema; generated client/server stubs)\n- Streaming: Bidirectional streaming built-in\n- Browser support: Requires grpc-web proxy\n- Best for: Internal microservices, high-throughput, streaming (chat, telemetry)\n\n**Performance:** gRPC is typically 5–10× faster than REST/JSON for the same payload due to binary encoding and HTTP/2 multiplexing.\n\n**Choose gRPC when:** service-to-service communication inside your cluster, you need streaming, or you want compile-time type safety between services. Keep REST for public APIs (developer experience, tooling, browser access)."
+    }
+  },
+  {
+    "id": "iq-arch-002",
+    "topicId": "distributed-systems",
+    "subtopicId": "cap",
+    "question": "Explain the CAP theorem. Give an example of a CP system and an AP system.",
+    "tags": ["CAP", "distributed-systems", "consistency"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "CAP: a distributed system can guarantee at most two of Consistency, Availability, and Partition Tolerance simultaneously. Since network partitions are inevitable, the real choice is CP (sacrifice availability during partition) vs AP (sacrifice strong consistency, serve stale data).",
+      "full": "**C — Consistency:** every read sees the most recent write or an error.\n**A — Availability:** every request gets a response (may be stale data).\n**P — Partition Tolerance:** the system keeps working when network messages are lost between nodes.\n\nSince P is unavoidable in real networks, you choose between CP and AP:\n\n**CP examples:**\n- **ZooKeeper / etcd:** used for distributed locks and leader election. During a partition, the minority partition refuses requests rather than risk split-brain.\n- **HBase:** writes go through HDFS; rejects writes if quorum unreachable.\n- **Use for:** financial transactions, distributed locks, config management — correctness over uptime.\n\n**AP examples:**\n- **Cassandra (default):** always accepts writes on any node; uses last-write-wins during conflict resolution. Reads may be stale.\n- **DynamoDB (eventually consistent reads):** serves cached data during partition.\n- **DNS:** returns cached (possibly stale) records rather than failing.\n- **Use for:** shopping carts, social feeds, session data — uptime over perfect consistency.\n\n**Nuance:** CAP only applies during a partition (a rare event). PACELC extends CAP: during normal operation, the real tradeoff is between Latency and Consistency."
+    },
+    "trickyFollowUp": {
+      "question": "Cassandra lets you configure consistency level per query. What consistency level gives you strong consistency?",
+      "answer": "QUORUM for both reads and writes. If you write to QUORUM nodes and read from QUORUM nodes, and quorum = ⌊n/2⌋+1, then at least one node overlaps — guaranteeing you read the latest write. This sacrifices some availability but gives strong consistency."
+    }
+  },
+  {
+    "id": "iq-arch-003",
+    "topicId": "database-fundamentals",
+    "subtopicId": "orm",
+    "question": "What is the N+1 query problem and how do you fix it in Hibernate?",
+    "tags": ["hibernate", "JPA", "N+1", "performance"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "N+1: loading N entities then issuing one extra query per entity to fetch an association — resulting in N+1 total queries instead of 1. Fix with JOIN FETCH, @EntityGraph, or batch fetching.",
+      "full": "**The problem:**\n```java\n// Loads all Orders in 1 query\nList<Order> orders = orderRepo.findAll();\n// Then for EACH order, Hibernate lazy-loads customer — 1 query each\norders.forEach(o -> log.info(o.getCustomer().getName())); // N+1 queries!\n```\nFor 100 orders = 101 queries. For 10,000 orders = 10,001 queries.\n\n**Fix 1: JOIN FETCH (JPQL)**\n```java\n@Query(\"SELECT o FROM Order o JOIN FETCH o.customer\")\nList<Order> findAllWithCustomer();\n// 1 SQL query with JOIN — all data in one round-trip\n```\n\n**Fix 2: @EntityGraph**\n```java\n@EntityGraph(attributePaths = {\"customer\", \"items\"})\nList<Order> findAll();\n```\n\n**Fix 3: Hibernate batch fetching**\n```java\n@BatchSize(size = 30) // on the lazy collection\nprivate Set<Item> items;\n// Hibernate issues SELECT...WHERE id IN (?,?,...) — max 30 per query\n```\n\n**Fix 4: DTO projection (most efficient)**\n```java\n@Query(\"SELECT new com.example.OrderSummary(o.id, c.name) FROM Order o JOIN o.customer c\")\nList<OrderSummary> findSummaries(); // no entity materialisation\n```\n\n**Detection:** enable SQL logging (`spring.jpa.show-sql=true`) and count queries. Tools: Hibernate Statistics, p6spy, Datadog APM."
+    }
+  },
+  {
+    "id": "iq-arch-004",
+    "topicId": "distributed-systems",
+    "subtopicId": "resilience",
+    "question": "What is the Circuit Breaker pattern and what problem does it solve?",
+    "tags": ["circuit-breaker", "resilience", "microservices"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Circuit Breaker prevents cascade failures: when a downstream service is failing, instead of piling up waiting threads, the circuit 'opens' and fails fast with a fallback. After a wait period, it probes with a single request and closes if the service recovers.",
+      "full": "**Problem without circuit breaker:**\nPayment service is slow (20s timeouts). Order service makes 100 req/s. Each thread waits 20s → thread pool exhausts in seconds → Order service also goes down → cascading failure.\n\n**Circuit Breaker states:**\n- **CLOSED:** normal operation. Calls pass through; failures counted.\n- **OPEN:** failure threshold exceeded. All calls fail immediately with a fallback — no waiting. Downstream gets a chance to recover.\n- **HALF-OPEN:** after `waitDuration`, one probe request is allowed. Success → CLOSED. Failure → OPEN again.\n\n```java\n// Resilience4j\n@CircuitBreaker(name = \"payment\", fallbackMethod = \"paymentFallback\")\npublic PaymentResult charge(Order order) {\n    return paymentClient.charge(order);\n}\n\nprivate PaymentResult paymentFallback(Order order, Exception ex) {\n    // Queue for retry, or return a graceful degraded response\n    return PaymentResult.pending(\"Payment queued — will retry\");\n}\n```\n\n**Resilience4j config:**\n```yaml\nresilience4j.circuitbreaker.instances.payment:\n  failure-rate-threshold: 50        # open at 50% failure rate\n  wait-duration-in-open-state: 30s\n  sliding-window-size: 10\n```\n\n**Gotcha:** tune thresholds carefully. A too-aggressive circuit breaker opens on transient blips and causes self-inflicted outages."
+    }
+  },
+  {
+    "id": "iq-arch-005",
+    "topicId": "database-fundamentals",
+    "subtopicId": "transactions",
+    "question": "Explain ACID properties. What isolation level do most production databases default to, and why?",
+    "tags": ["ACID", "transactions", "isolation", "database"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "ACID: Atomicity (all or nothing), Consistency (valid state transitions), Isolation (concurrent transactions don't interfere), Durability (committed data survives crashes). Most databases default to READ COMMITTED — it prevents dirty reads while offering better performance than SERIALIZABLE.",
+      "full": "**A — Atomicity:** transaction is all-or-nothing. If step 3 of 5 fails, steps 1–2 are rolled back. Implemented via undo logs.\n\n**C — Consistency:** transaction transitions DB from one valid state to another. Constraints (FK, CHECK, UNIQUE) are enforced.\n\n**I — Isolation:** concurrent transactions appear serial. Different isolation levels trade safety for performance:\n| Level | Dirty Read | Non-repeatable Read | Phantom Read |\n|---|---|---|---|\n| READ UNCOMMITTED | Possible | Possible | Possible |\n| READ COMMITTED (PostgreSQL default) | Prevented | Possible | Possible |\n| REPEATABLE READ (MySQL default) | Prevented | Prevented | Possible |\n| SERIALIZABLE | Prevented | Prevented | Prevented |\n\n**D — Durability:** committed transactions survive crashes. Implemented via WAL (Write-Ahead Log) — changes written to log before data pages.\n\n**Default isolation:**\n- **PostgreSQL:** READ COMMITTED\n- **MySQL/InnoDB:** REPEATABLE READ\n\nREAD COMMITTED is the sweet spot: prevents dirty reads (reading uncommitted data from another tx) while avoiding expensive row-level locking. SERIALIZABLE prevents all anomalies but kills concurrency."
+    }
+  },
+  {
+    "id": "iq-arch-006",
+    "topicId": "architecture-patterns",
+    "subtopicId": "hexagonal",
+    "question": "What is hexagonal architecture? How does it improve testability?",
+    "tags": ["hexagonal", "ports-and-adapters", "architecture", "testing"],
+    "difficulty": "Senior",
+    "answer": {
+      "summary": "Hexagonal architecture (ports and adapters) isolates domain logic from infrastructure. The domain defines ports (interfaces); adapters implement them. This means you can test domain logic with no DB, no HTTP, no Kafka — just pure Java objects.",
+      "full": "**Core idea:** the domain (business logic) is the centre. It communicates only through ports (interfaces). Adapters (REST controllers, JPA repos, Kafka listeners) implement the ports and plug in from outside.\n\n```\n[REST Controller] ──▶ [OrderPort (interface)] ◀── [OrderService (domain)]\n                                                         │\n                                               [InventoryPort (interface)]\n                                                         │\n                                               [JPA Adapter / Kafka Adapter]\n```\n\n**Port types:**\n- **Driving ports (primary):** called by outside → service. E.g. `PlaceOrderUseCase` called by REST controller.\n- **Driven ports (secondary):** called by service → outside. E.g. `OrderRepository` implemented by JPA.\n\n**Testability:**\n```java\n// Test domain with zero infrastructure\nclass PlaceOrderUseCaseTest {\n    @Test void should_reject_order_exceeding_credit_limit() {\n        // In-memory fakes — no Spring context, no DB\n        var repo = new InMemoryOrderRepository();\n        var inventory = new InMemoryInventoryPort();\n        var useCase = new PlaceOrderService(repo, inventory);\n        assertThrows(CreditLimitExceededException.class,\n            () -> useCase.place(orderWithAmount(10_000)));\n    }\n}\n```\n\n**In Spring:** use @Service for domain, @Repository for driven adapters, @RestController for driving adapters. The DI container wires the ports — domain never imports Spring."
+    }
+  },
+  {
+    "id": "iq-arch-007",
+    "topicId": "distributed-systems",
+    "subtopicId": "eventual-consistency",
+    "question": "What is eventual consistency? Give a practical example.",
+    "tags": ["eventual-consistency", "distributed-systems", "CAP"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Eventual consistency means that, given no new updates, all replicas will converge to the same value — eventually. It's weaker than strong consistency (where all reads see the latest write). Example: DNS propagation, social media likes, shopping cart in Cassandra.",
+      "full": "**Definition:** a system is eventually consistent if, in the absence of new updates, all data replicas eventually converge to the same value. There is no guarantee on how long 'eventually' takes.\n\n**Practical example — Cassandra shopping cart:**\n```\nUser adds item on Node A → immediately visible on Node A\nUser reads on Node B  → may still show old cart (replica not yet synced)\nAfter replication lag (typically < 1s) → Node B shows updated cart\n```\n\n**Why accept this trade-off?** Higher availability (no blocking for quorum) and lower write latency. Acceptable for carts, likes, view counts — not for financial balances.\n\n**Conflict resolution strategies:**\n- **Last-write-wins (LWW):** higher timestamp wins. Risk: concurrent writes can lose data (e.g. two users add different items simultaneously — one is lost).\n- **CRDTs:** mathematically merge-safe data structures. Add-wins set CRDT: both items are preserved regardless of conflict. Used in Redis, Riak.\n- **Application-level merge:** application reads both versions, merges, writes back (Amazon Dynamo's approach).\n\n**Gotcha:** 'eventually consistent' is not 'randomly inconsistent'. There is a bounded replication lag. The system converges — you just can't read your writes immediately from a different node."
+    }
+  },
+  {
+    "id": "iq-arch-008",
+    "topicId": "security-basics",
+    "subtopicId": "auth",
+    "question": "How does JWT authentication work? What are the security risks?",
+    "tags": ["JWT", "authentication", "security"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "JWT (JSON Web Token) is a signed, self-contained token: header.payload.signature. The server signs it with a secret/private key; clients present it on every request; the server verifies the signature without hitting a database. Risks: token theft (no server-side revocation), weak algorithms, storing secrets in payload.",
+      "full": "**Structure:** `BASE64(header).BASE64(payload).SIGNATURE`\n- Header: `{\"alg\":\"HS256\",\"typ\":\"JWT\"}`\n- Payload: `{\"sub\":\"user123\",\"roles\":[\"ADMIN\"],\"exp\":1700000000}`\n- Signature: `HMACSHA256(base64Header + \".\" + base64Payload, secret)`\n\n**Flow:**\n1. User logs in → server creates JWT signed with secret → returns to client\n2. Client stores JWT (ideally httpOnly cookie, not localStorage)\n3. Client sends `Authorization: Bearer <token>` on every request\n4. Server verifies signature — no DB lookup needed (stateless)\n\n**Security risks and mitigations:**\n```\n1. Token theft → httpOnly + Secure cookies (not localStorage; XSS-proof)\n2. No revocation → short expiry (15 min) + refresh tokens in secure cookie\n3. alg:none attack → whitelist allowed algorithms explicitly (never accept 'none')\n4. Weak secret → use >= 256-bit random secret or RS256 (asymmetric)\n5. Sensitive data in payload → JWT is only Base64-encoded, NOT encrypted;\n   never put passwords, PII, or secrets in payload\n```\n\n**Spring Security:**\n```java\n@Bean\npublic SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {\n    return http\n        .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))\n        .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))\n        .build();\n}\n```"
+    },
+    "trickyFollowUp": {
+      "question": "How do you implement logout with JWTs if they're stateless?",
+      "answer": "True stateless logout is impossible — the token is valid until it expires. Common solutions: (1) short expiry (15 min) so the window of abuse is small, (2) token blacklist in Redis (defeats statelessness but enables immediate revocation), (3) rotate signing key on logout (invalidates all tokens — sledgehammer approach). Best practice: use refresh tokens with a server-side revocation list; keep access tokens short-lived."
+    }
+  }
+]
