@@ -147,6 +147,13 @@ export default function Sidebar({ onNavigate }: Props) {
           Behavioral Questions
         </Link>
         <Link
+          to="/interview-prep/system-design"
+          onClick={onNavigate}
+          className="block px-4 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+        >
+          System Design
+        </Link>
+        <Link
           to="/assessment"
           onClick={onNavigate}
           className="block px-4 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"

@@ -79,7 +79,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 |--------|-------------|--------|
 | T26 | Interview Q&A content: types, 32+ questions across 4 topic groups | ✅ Done |
 | T27 | Interview prep UI: checklist, Q&A viewer, behavioral questions | ✅ Done |
-| T28 | System design section: 6 classic designs, interactive SVG diagram component | ⬜ Pending |
+| T28 | System design section: 6 classic designs, interactive SVG diagram component | ✅ Done |
 
 ### F6 — Full Progress Dashboard (Phase 5)
 | Ticket | Description | Status |

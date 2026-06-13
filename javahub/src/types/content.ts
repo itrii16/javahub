@@ -158,6 +158,39 @@ export interface InterviewQuestion {
 
 export type PrepStatus = 'not-started' | 'in-progress' | 'ready'
 
+export interface SvgComponent {
+  id: string
+  label: string
+  x: number
+  y: number
+  width: number
+  height: number
+  shape: 'rect' | 'cylinder' | 'diamond' | 'circle'
+  javaNote: string
+}
+
+export interface SvgConnection {
+  from: string
+  to: string
+  label?: string
+}
+
+export interface SystemDesign {
+  id: string
+  title: string
+  description: string
+  requirements: string[]
+  nonFunctionalReqs: string[]
+  components: SvgComponent[]
+  connections: SvgConnection[]
+  componentBreakdown: {
+    componentId: string
+    heading: string
+    detail: string
+    javaImpl?: string
+  }[]
+}
+
 export type UserLevel = 'Junior' | 'Mid' | 'Senior'
 
 export interface UserProfile {

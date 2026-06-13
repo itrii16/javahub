@@ -17,6 +17,8 @@ import CheatSheetPage from '@/pages/CheatSheetPage'
 import InterviewPrepPage from '@/pages/InterviewPrepPage'
 import InterviewPrepTopicPage from '@/pages/InterviewPrepTopicPage'
 import BehavioralQuestionsPage from '@/pages/BehavioralQuestionsPage'
+import SystemDesignListPage from '@/pages/SystemDesignListPage'
+import SystemDesignPage from '@/pages/SystemDesignPage'
 
 export const router = createBrowserRouter(
   [
@@ -92,6 +94,14 @@ export const router = createBrowserRouter(
         {
           path: 'interview-prep/:topicId',
           element: <InterviewPrepTopicPage />,
+        },
+        {
+          path: 'interview-prep/system-design',
+          element: <SystemDesignListPage />,
+        },
+        {
+          path: 'interview-prep/system-design/:designId',
+          element: <SystemDesignPage />,
         },
         {
           path: 'interview-sim',

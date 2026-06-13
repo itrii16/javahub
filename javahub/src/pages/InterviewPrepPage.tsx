@@ -73,7 +73,7 @@ export default function InterviewPrepPage() {
       </div>
 
       {/* Quick links */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Link
           to="/interview-sim"
           className="flex items-center gap-3 p-4 bg-gray-900 border border-gray-800 hover:border-indigo-500/50 rounded-xl transition-colors"
@@ -92,6 +92,16 @@ export default function InterviewPrepPage() {
           <div>
             <p className="text-sm font-medium text-gray-100">Behavioral Questions</p>
             <p className="text-xs text-gray-500">15 STAR-format questions</p>
+          </div>
+        </Link>
+        <Link
+          to="/interview-prep/system-design"
+          className="flex items-center gap-3 p-4 bg-gray-900 border border-gray-800 hover:border-indigo-500/50 rounded-xl transition-colors"
+        >
+          <span className="text-2xl">🏗</span>
+          <div>
+            <p className="text-sm font-medium text-gray-100">System Design</p>
+            <p className="text-xs text-gray-500">6 classic designs</p>
           </div>
         </Link>
       </div>

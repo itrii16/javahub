@@ -1,0 +1,56 @@
+{
+  "id": "chat-application",
+  "title": "Chat Application",
+  "description": "Design a real-time chat system supporting 1-on-1 and group messaging with message persistence, presence indicators, and media sharing.",
+  "requirements": [
+    "Real-time 1-on-1 and group messaging (up to 1000 members)",
+    "Message persistence — users can load history when rejoining",
+    "Online/offline presence indicators with last seen timestamp",
+    "Read receipts (sent → delivered → read)",
+    "Media sharing: images/videos up to 100MB"
+  ],
+  "nonFunctionalReqs": [
+    "< 200ms message delivery P99 for online users",
+    "Support 50M concurrent users",
+    "Messages durable — never lost after server ack",
+    "Horizontal scalability — add WebSocket servers as needed"
+  ],
+  "components": [
+    { "id": "client",    "label": "Client",               "x": 20,  "y": 180, "width": 100, "height": 50, "shape": "rect",     "javaNote": "Mobile/web client maintains persistent WebSocket connection. Reconnects with exponential backoff on disconnect. Sends heartbeat every 30s. Falls back to SSE (Server-Sent Events) if WebSocket blocked." },
+    { "id": "ws-server", "label": "WebSocket Server",     "x": 165, "y": 180, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Spring WebSocket + STOMP. Each server holds thousands of concurrent connections in-memory. Stateful — connection is pinned to server. Load balancer uses IP hash or sticky sessions to route reconnects to same server." },
+    { "id": "msg-svc",   "label": "Message Service",      "x": 335, "y": 100, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Validates message, assigns monotonic message ID (Snowflake), persists to Cassandra, publishes MessageEvent to Redis Pub/Sub channel for the conversation. Returns ack to sender." },
+    { "id": "cassandra", "label": "Message DB\n(Cassandra)", "x": 510, "y": 100, "width": 130, "height": 50, "shape": "cylinder", "javaNote": "Partition key: (conversation_id), clustering key: (message_id DESC). Wide-row model lets you fetch last N messages with single partition read. Tunable consistency: QUORUM for writes, ONE for reads (eventual). TTL = 1 year for message retention." },
+    { "id": "presence",  "label": "Presence Service",     "x": 335, "y": 260, "width": 120, "height": 50, "shape": "rect",     "javaNote": "Each WebSocket server publishes heartbeats to Redis SETEX 'presence:{userId}' 45s. Presence service subscribes to expiry events (notify-keyspace-events Ex) to detect going offline. Reads presence key to check online status." },
+    { "id": "pubsub",    "label": "Pub/Sub (Redis)",      "x": 510, "y": 180, "width": 130, "height": 50, "shape": "diamond", "javaNote": "Each conversation has a Redis channel: 'chat:{conversationId}'. WebSocket servers subscribe to channels for their connected users. On new message: publish to channel → all subscribed servers receive → push to connected users. Avoids direct server-to-server connections." },
+    { "id": "s3",        "label": "Media Storage (S3)",   "x": 510, "y": 300, "width": 130, "height": 50, "shape": "cylinder", "javaNote": "Client uploads media directly to S3 via presigned URL (15 min expiry) bypassing chat servers. Message contains S3 object key. CDN (CloudFront) serves media with signed cookies for access control." }
+  ],
+  "connections": [
+    { "from": "client",    "to": "ws-server", "label": "WebSocket" },
+    { "from": "ws-server", "to": "msg-svc",   "label": "send message" },
+    { "from": "ws-server", "to": "presence",  "label": "heartbeat" },
+    { "from": "msg-svc",   "to": "cassandra", "label": "persist" },
+    { "from": "msg-svc",   "to": "pubsub",    "label": "publish" },
+    { "from": "pubsub",    "to": "ws-server", "label": "deliver" },
+    { "from": "client",    "to": "s3",        "label": "media upload (presigned)" }
+  ],
+  "componentBreakdown": [
+    {
+      "componentId": "ws-server",
+      "heading": "WebSocket vs SSE vs Long Polling",
+      "detail": "WebSocket is bidirectional, low overhead — ideal for chat. SSE is simpler (unidirectional, HTTP) — good for notifications. Long polling is highest latency and server load — avoid for chat.",
+      "javaImpl": "@Configuration\n@EnableWebSocketMessageBroker\npublic class WebSocketConfig implements WebSocketMessageBrokerConfigurer {\n    @Override\n    public void configureMessageBroker(MessageBrokerRegistry registry) {\n        registry.enableSimpleBroker(\"/topic\", \"/queue\");\n        registry.setApplicationDestinationPrefixes(\"/app\");\n    }\n    \n    @Override\n    public void registerStompEndpoints(StompEndpointRegistry registry) {\n        registry.addEndpoint(\"/ws\").setAllowedOriginPatterns(\"*\").withSockJS();\n    }\n}"
+    },
+    {
+      "componentId": "cassandra",
+      "heading": "Message Ordering with Snowflake IDs",
+      "detail": "Cassandra clustering column is message_id (Snowflake) in DESC order. Snowflake IDs are monotonically increasing so ORDER BY message_id gives chronological order. Fetch last 50 messages: WHERE conversation_id=? LIMIT 50.",
+      "javaImpl": "// Cassandra table: messages\n// PRIMARY KEY ((conversation_id), message_id)\n// WITH CLUSTERING ORDER BY (message_id DESC)\n\n@Query(\"SELECT * FROM messages WHERE conversation_id = :conversationId \"\n     + \"AND message_id < :beforeId LIMIT :limit\")\nList<Message> fetchBefore(\n    @Param(\"conversationId\") UUID conversationId,\n    @Param(\"beforeId\") long beforeId,\n    @Param(\"limit\") int limit);"
+    },
+    {
+      "componentId": "pubsub",
+      "heading": "Fan-out via Redis Pub/Sub",
+      "detail": "When Server A receives a message for a conversation, it publishes to Redis channel. Servers B and C subscribed to that channel deliver to their connected users. No direct server-to-server connections needed.",
+      "javaImpl": "@Service\npublic class MessageFanout {\n    private final RedisTemplate<String, MessageEvent> redis;\n    \n    public void publish(UUID conversationId, MessageEvent event) {\n        redis.convertAndSend(\"chat:\" + conversationId, event);\n    }\n    \n    @Bean\n    public MessageListenerAdapter listenerAdapter(ChatMessageHandler handler) {\n        return new MessageListenerAdapter(handler, \"onMessage\");\n    }\n}"
+    }
+  ]
+}
