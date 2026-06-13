@@ -21,6 +21,8 @@ import SystemDesignListPage from '@/pages/SystemDesignListPage'
 import SystemDesignPage from '@/pages/SystemDesignPage'
 import BookmarksPage from '@/pages/BookmarksPage'
 import JavaNewsPage from '@/pages/JavaNewsPage'
+import DesignPatternsListPage from '@/pages/DesignPatternsListPage'
+import DesignPatternPage from '@/pages/DesignPatternPage'
 
 export const router = createBrowserRouter(
   [
@@ -120,6 +122,14 @@ export const router = createBrowserRouter(
         {
           path: 'java-news',
           element: <JavaNewsPage />,
+        },
+        {
+          path: 'design-patterns',
+          element: <DesignPatternsListPage />,
+        },
+        {
+          path: 'design-patterns/:patternId',
+          element: <DesignPatternPage />,
         },
       ],
     },

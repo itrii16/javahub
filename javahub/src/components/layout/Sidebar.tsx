@@ -133,6 +133,13 @@ export default function Sidebar({ onNavigate }: Props) {
         >
           Java News
         </Link>
+        <Link
+          to="/design-patterns"
+          onClick={onNavigate}
+          className="block px-4 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+        >
+          Design Patterns
+        </Link>
       </div>
 
       <div className="mb-5">

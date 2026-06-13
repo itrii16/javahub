@@ -1,0 +1,626 @@
+[
+  {
+    "id": "singleton",
+    "name": "Singleton",
+    "category": "Creational",
+    "intent": "Ensure a class has only one instance and provide a global point of access to it.",
+    "whenToUse": "Use when exactly one object is needed to coordinate actions across a system — such as a configuration manager, connection pool, or logging service. Avoid when testability is critical, as global state makes unit testing difficult.",
+    "participants": [
+      {
+        "name": "Singleton",
+        "role": "Defines the getInstance() operation that lets clients access its unique instance. May be responsible for creating its own unique instance."
+      }
+    ],
+    "javaExample": "// Thread-safe Singleton using double-checked locking\npublic class DatabaseConnectionPool {\n    // volatile ensures visibility across threads\n    private static volatile DatabaseConnectionPool instance;\n    private final List<Connection> pool;\n\n    private DatabaseConnectionPool() {\n        pool = new ArrayList<>();\n        // initialize pool...\n    }\n\n    public static DatabaseConnectionPool getInstance() {\n        if (instance == null) {                      // first check (no lock)\n            synchronized (DatabaseConnectionPool.class) {\n                if (instance == null) {              // second check (with lock)\n                    instance = new DatabaseConnectionPool();\n                }\n            }\n        }\n        return instance;\n    }\n\n    public Connection acquire() { /* ... */ return pool.remove(0); }\n}\n\n// Preferred alternative: Enum Singleton (thread-safe, serialization-safe)\npublic enum AppConfig {\n    INSTANCE;\n\n    private final Properties props = new Properties();\n\n    public String get(String key) { return props.getProperty(key); }\n    public void set(String key, String value) { props.setProperty(key, value); }\n}\n\n// Usage\nAppConfig.INSTANCE.set(\"timeout\", \"30\");\nString timeout = AppConfig.INSTANCE.get(\"timeout\");",
+    "realWorldJava": "java.lang.Runtime.getRuntime() returns the single Runtime instance for the JVM. Spring's ApplicationContext acts as a Singleton container — each bean is created once and shared. java.awt.Desktop.getDesktop() follows the same pattern.",
+    "pros": [
+      "Guarantees a single instance, preventing conflicting state",
+      "Provides a global access point without passing references everywhere",
+      "Instance is created only when first needed (lazy initialization)"
+    ],
+    "cons": [
+      "Global state makes unit testing difficult — hard to swap with a mock",
+      "Violates Single Responsibility Principle by managing its own lifecycle",
+      "Can mask bad design by acting as a dumping ground for unrelated functionality",
+      "Requires careful synchronization in multithreaded environments"
+    ],
+    "relatedPatterns": ["factory-method", "abstract-factory"],
+    "interviewTips": [
+      "Always mention the double-checked locking pattern AND the enum variant — interviewers expect you to know both",
+      "Explain why 'volatile' is required: without it, the JVM may reorder instructions causing a partially-initialized object to be seen by another thread",
+      "Be ready to discuss why Singleton is sometimes considered an anti-pattern (global state, tight coupling, testing difficulty)",
+      "Enum Singleton handles serialization and reflection attacks automatically — highlight this over classic DCL"
+    ]
+  },
+  {
+    "id": "builder",
+    "name": "Builder",
+    "category": "Creational",
+    "intent": "Separate the construction of a complex object from its representation so that the same construction process can create different representations.",
+    "whenToUse": "Use when constructing complex objects that require many optional parameters, or when the construction process must allow different representations of the same object. Avoids telescoping constructors with many nullable parameters.",
+    "participants": [
+      {
+        "name": "Builder",
+        "role": "Specifies the abstract interface for creating parts of a Product."
+      },
+      {
+        "name": "ConcreteBuilder",
+        "role": "Constructs and assembles parts of the product by implementing the Builder interface. Defines and tracks the representation it creates."
+      },
+      {
+        "name": "Director",
+        "role": "Constructs an object using the Builder interface. Optional in many Java implementations."
+      },
+      {
+        "name": "Product",
+        "role": "Represents the complex object under construction."
+      }
+    ],
+    "javaExample": "// Fluent Builder pattern for an HTTP Request\npublic class HttpRequest {\n    private final String url;\n    private final String method;\n    private final Map<String, String> headers;\n    private final String body;\n    private final int timeoutMs;\n\n    private HttpRequest(Builder builder) {\n        this.url = builder.url;\n        this.method = builder.method;\n        this.headers = Collections.unmodifiableMap(builder.headers);\n        this.body = builder.body;\n        this.timeoutMs = builder.timeoutMs;\n    }\n\n    public static class Builder {\n        private final String url;          // required\n        private String method = \"GET\";     // optional with default\n        private Map<String, String> headers = new HashMap<>();\n        private String body = null;\n        private int timeoutMs = 5000;\n\n        public Builder(String url) { this.url = url; }\n\n        public Builder method(String method) { this.method = method; return this; }\n        public Builder header(String key, String value) { headers.put(key, value); return this; }\n        public Builder body(String body) { this.body = body; return this; }\n        public Builder timeoutMs(int ms) { this.timeoutMs = ms; return this; }\n\n        public HttpRequest build() {\n            if (url == null || url.isBlank()) throw new IllegalStateException(\"URL required\");\n            return new HttpRequest(this);\n        }\n    }\n}\n\n// Usage\nHttpRequest request = new HttpRequest.Builder(\"https://api.example.com/data\")\n    .method(\"POST\")\n    .header(\"Content-Type\", \"application/json\")\n    .body(\"{\\\"key\\\": \\\"value\\\"}\")\n    .timeoutMs(10000)\n    .build();",
+    "realWorldJava": "StringBuilder and StringBuffer are the canonical Java examples — append() returns 'this' enabling method chaining. Lombok's @Builder annotation generates the entire Builder boilerplate at compile time. java.util.stream.Stream.Builder, ProcessBuilder, and OkHttp's Request.Builder all use this pattern. Spring's MockMvcRequestBuilders also follows this approach.",
+    "pros": [
+      "Eliminates telescoping constructors — no need for overloaded constructors with nullable parameters",
+      "Immutable Product objects are easy to create (set all fields before constructing)",
+      "Construction process is readable and self-documenting due to method chaining",
+      "Same builder can produce different representations with different parameter combinations"
+    ],
+    "cons": [
+      "Increases code volume — requires a separate Builder inner class for each Product",
+      "Builder and Product classes can become out of sync if Product fields are added without updating Builder",
+      "Mutable builder state can cause issues if the builder is reused across multiple build() calls"
+    ],
+    "relatedPatterns": ["abstract-factory", "composite"],
+    "interviewTips": [
+      "Compare Builder to telescoping constructors: 'new Person(name, age, null, null, \"NYC\", null)' — Builder makes optional parameters explicit",
+      "Mention Lombok @Builder as the production shortcut — shows awareness of real-world Java tooling",
+      "Highlight that making the Product's constructor private enforces that it can only be built via the Builder",
+      "StringBuilder is the most common interview example — it uses the pattern without a separate Director"
+    ]
+  },
+  {
+    "id": "factory-method",
+    "name": "Factory Method",
+    "category": "Creational",
+    "intent": "Define an interface for creating an object, but let subclasses decide which class to instantiate. Factory Method lets a class defer instantiation to subclasses.",
+    "whenToUse": "Use when a class cannot anticipate the class of objects it must create, or when subclasses should control the objects their superclass creates. Common in framework design where the framework calls code it doesn't control.",
+    "participants": [
+      {
+        "name": "Creator",
+        "role": "Declares the factory method (createProduct) which returns a Product. May define a default implementation that returns a ConcreteProduct."
+      },
+      {
+        "name": "ConcreteCreator",
+        "role": "Overrides the factory method to return an instance of ConcreteProduct."
+      },
+      {
+        "name": "Product",
+        "role": "Defines the interface of objects the factory method creates."
+      },
+      {
+        "name": "ConcreteProduct",
+        "role": "Implements the Product interface."
+      }
+    ],
+    "javaExample": "// Factory Method: notification sender framework\npublic interface Notification {\n    void send(String message, String recipient);\n}\n\npublic class EmailNotification implements Notification {\n    @Override\n    public void send(String message, String recipient) {\n        System.out.println(\"EMAIL to \" + recipient + \": \" + message);\n    }\n}\n\npublic class SmsNotification implements Notification {\n    @Override\n    public void send(String message, String recipient) {\n        System.out.println(\"SMS to \" + recipient + \": \" + message);\n    }\n}\n\n// Creator — defines the factory method\npublic abstract class NotificationService {\n    // Factory method — subclasses decide what to create\n    protected abstract Notification createNotification();\n\n    // Template method uses the factory method\n    public void notifyUser(String message, String user) {\n        Notification n = createNotification();\n        n.send(message, user);\n    }\n}\n\npublic class EmailNotificationService extends NotificationService {\n    @Override\n    protected Notification createNotification() {\n        return new EmailNotification();\n    }\n}\n\npublic class SmsNotificationService extends NotificationService {\n    @Override\n    protected Notification createNotification() {\n        return new SmsNotification();\n    }\n}\n\n// Usage\nNotificationService service = new EmailNotificationService();\nservice.notifyUser(\"Your order shipped!\", \"user@example.com\");",
+    "realWorldJava": "Spring's BeanFactory and ApplicationContext use factory methods to create and manage beans — getBean() is the canonical factory method. java.util.Calendar.getInstance() returns a subclass appropriate for the locale. java.util.Iterator from Collection.iterator() defers the concrete iterator type to each collection implementation.",
+    "pros": [
+      "Eliminates tight coupling between Creator and ConcreteProduct classes",
+      "Single Responsibility: product creation logic is centralized in one place",
+      "Open/Closed: adding new product types requires only a new ConcreteCreator subclass"
+    ],
+    "cons": [
+      "Can lead to a parallel class hierarchy — every new ConcreteProduct needs a corresponding ConcreteCreator",
+      "Client code must subclass Creator to change the Product type, which may be undesirable"
+    ],
+    "relatedPatterns": ["abstract-factory", "template-method", "prototype"],
+    "interviewTips": [
+      "Distinguish Factory Method (subclass decides) from Abstract Factory (interface for families) and Simple Factory (static helper — not a GoF pattern)",
+      "Spring's ApplicationContext.getBean() is the most cited real-world Java example — know it cold",
+      "Explain that Factory Method is typically combined with Template Method: the template method defines the algorithm, the factory method creates the objects it uses",
+      "The pattern enables the Open/Closed Principle — adding a new product type doesn't change existing Creator code"
+    ]
+  },
+  {
+    "id": "abstract-factory",
+    "name": "Abstract Factory",
+    "category": "Creational",
+    "intent": "Provide an interface for creating families of related or dependent objects without specifying their concrete classes.",
+    "whenToUse": "Use when a system must be independent of how its products are created, or when you need to ensure that a family of related products are always used together. Particularly useful when swapping between product families at runtime (e.g., different database vendors).",
+    "participants": [
+      {
+        "name": "AbstractFactory",
+        "role": "Declares an interface for operations that create abstract product objects (one method per product type)."
+      },
+      {
+        "name": "ConcreteFactory",
+        "role": "Implements the operations to create concrete product objects. Each factory corresponds to one product family."
+      },
+      {
+        "name": "AbstractProduct",
+        "role": "Declares an interface for a type of product object."
+      },
+      {
+        "name": "ConcreteProduct",
+        "role": "Defines a product object to be created by the corresponding concrete factory; implements the AbstractProduct interface."
+      }
+    ],
+    "javaExample": "// Abstract Factory: JDBC-style database factory\npublic interface Connection { void execute(String sql); }\npublic interface Statement { void prepare(String sql); }\n\n// Abstract Factory interface\npublic interface DatabaseFactory {\n    Connection createConnection(String url);\n    Statement createStatement();\n}\n\n// PostgreSQL family\npublic class PostgreSQLConnection implements Connection {\n    @Override public void execute(String sql) { System.out.println(\"PG: \" + sql); }\n}\npublic class PostgreSQLStatement implements Statement {\n    @Override public void prepare(String sql) { System.out.println(\"PG prepare: \" + sql); }\n}\npublic class PostgreSQLFactory implements DatabaseFactory {\n    @Override public Connection createConnection(String url) { return new PostgreSQLConnection(); }\n    @Override public Statement createStatement() { return new PostgreSQLStatement(); }\n}\n\n// MySQL family\npublic class MySQLConnection implements Connection {\n    @Override public void execute(String sql) { System.out.println(\"MySQL: \" + sql); }\n}\npublic class MySQLStatement implements Statement {\n    @Override public void prepare(String sql) { System.out.println(\"MySQL prepare: \" + sql); }\n}\npublic class MySQLFactory implements DatabaseFactory {\n    @Override public Connection createConnection(String url) { return new MySQLConnection(); }\n    @Override public Statement createStatement() { return new MySQLStatement(); }\n}\n\n// Client code — only depends on abstract types\npublic class DataAccessLayer {\n    private final DatabaseFactory factory;\n    public DataAccessLayer(DatabaseFactory factory) { this.factory = factory; }\n\n    public void query(String sql) {\n        Connection conn = factory.createConnection(\"jdbc:...\");\n        conn.execute(sql);\n    }\n}\n\n// Swap the entire family by changing one line\nDataAccessLayer dal = new DataAccessLayer(new PostgreSQLFactory());",
+    "realWorldJava": "JDBC itself is the classic Abstract Factory in the JDK: java.sql.DriverManager returns a java.sql.Connection (abstract), and each driver (PostgreSQL, MySQL, Oracle) provides its own Connection, Statement, and ResultSet implementations. javax.xml.parsers.DocumentBuilderFactory and SAXParserFactory follow the same pattern — calling newInstance() returns a platform-specific implementation.",
+    "pros": [
+      "Ensures product families are always used together consistently",
+      "Client code is isolated from concrete product implementations",
+      "Swapping product families requires changing only the factory, not client code",
+      "Promotes consistency among products within a family"
+    ],
+    "cons": [
+      "Adding a new product type requires changing the AbstractFactory interface and ALL concrete factories",
+      "Can become overly complex when only a few products are needed",
+      "More rigid than Factory Method when the product family is not well-defined upfront"
+    ],
+    "relatedPatterns": ["factory-method", "singleton", "prototype"],
+    "interviewTips": [
+      "Key distinction: Factory Method creates one product via inheritance; Abstract Factory creates families of products via composition",
+      "JDBC is the canonical answer for real-world Java — DriverManager + Connection + Statement + ResultSet is a textbook Abstract Factory family",
+      "Mention that Abstract Factory is typically implemented using Factory Methods internally",
+      "The pattern is ideal when the system needs to be portable across multiple platforms or database vendors"
+    ]
+  },
+  {
+    "id": "prototype",
+    "name": "Prototype",
+    "category": "Creational",
+    "intent": "Specify the kinds of objects to create using a prototypical instance, and create new objects by copying (cloning) this prototype.",
+    "whenToUse": "Use when object creation is expensive (e.g., database queries, network calls) and a pre-configured instance can be copied more cheaply. Also useful when you need to create objects whose type is specified at runtime.",
+    "participants": [
+      {
+        "name": "Prototype",
+        "role": "Declares an interface for cloning itself (the clone() method)."
+      },
+      {
+        "name": "ConcretePrototype",
+        "role": "Implements the cloning operation."
+      },
+      {
+        "name": "Client",
+        "role": "Creates a new object by asking a prototype to clone itself."
+      }
+    ],
+    "javaExample": "// Prototype: game character template system\n// Java's Cloneable marks the class as safe to clone\npublic class GameCharacter implements Cloneable {\n    private String name;\n    private int health;\n    private int attack;\n    private List<String> abilities;  // mutable — needs deep copy!\n\n    public GameCharacter(String name, int health, int attack, List<String> abilities) {\n        this.name = name;\n        this.health = health;\n        this.attack = attack;\n        this.abilities = new ArrayList<>(abilities);\n    }\n\n    // Shallow clone — abilities list would be shared (WRONG for mutable fields)\n    // @Override\n    // public GameCharacter clone() throws CloneNotSupportedException {\n    //     return (GameCharacter) super.clone();  // BUG: abilities is shared!\n    // }\n\n    // Deep clone — creates independent copies of all mutable fields\n    @Override\n    public GameCharacter clone() {\n        return new GameCharacter(\n            this.name,\n            this.health,\n            this.attack,\n            new ArrayList<>(this.abilities)  // deep copy of mutable list\n        );\n    }\n\n    public void setName(String name) { this.name = name; }\n    public void addAbility(String ability) { this.abilities.add(ability); }\n\n    @Override\n    public String toString() {\n        return name + \" HP:\" + health + \" ATK:\" + attack + \" \" + abilities;\n    }\n}\n\n// Usage\nGameCharacter warrior = new GameCharacter(\"Warrior\", 100, 30, List.of(\"Slash\", \"Block\"));\nGameCharacter clone1 = warrior.clone();\nclone1.setName(\"Warrior-2\");\nclone1.addAbility(\"Charge\");  // does NOT affect original warrior",
+    "realWorldJava": "Object.clone() is Java's built-in prototype mechanism, but it has pitfalls (Cloneable is a marker interface, not a functional one). Spring's prototype bean scope creates a new bean instance on each getBean() call using this pattern. In practice, copy constructors or static factory methods like Person.copyOf(other) are preferred over Cloneable due to its design flaws (Joshua Bloch, Effective Java Item 13).",
+    "pros": [
+      "Avoids expensive initialization by copying a pre-configured object",
+      "Reduces subclassing — clone the prototype instead of creating subclass hierarchies",
+      "Clients can produce new objects without knowing their concrete types"
+    ],
+    "cons": [
+      "Deep cloning complex object graphs is error-prone — every mutable field must be copied recursively",
+      "Cloneable interface in Java is poorly designed — clone() is defined on Object, not Cloneable",
+      "Circular references in object graphs can cause infinite loops during deep cloning"
+    ],
+    "relatedPatterns": ["abstract-factory", "composite", "decorator"],
+    "interviewTips": [
+      "Always distinguish shallow vs deep copy — this is the most common follow-up question",
+      "Explain why Effective Java recommends against Cloneable: clone() is declared on Object, not on Cloneable; it throws checked CloneNotSupportedException; and default super.clone() is a shallow copy",
+      "Preferred alternatives: copy constructors (new Person(other)) or static factory methods — these are explicit and type-safe",
+      "Spring's prototype scope is the canonical real-world example"
+    ]
+  },
+  {
+    "id": "decorator",
+    "name": "Decorator",
+    "category": "Structural",
+    "intent": "Attach additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality.",
+    "whenToUse": "Use when you need to add responsibilities to individual objects without affecting others of the same class. Use instead of subclassing when the number of feature combinations would cause a class explosion.",
+    "participants": [
+      {
+        "name": "Component",
+        "role": "Defines the interface for objects that can have responsibilities added to them dynamically."
+      },
+      {
+        "name": "ConcreteComponent",
+        "role": "Defines an object to which additional responsibilities can be attached."
+      },
+      {
+        "name": "Decorator",
+        "role": "Maintains a reference to a Component object and defines an interface conforming to Component's interface."
+      },
+      {
+        "name": "ConcreteDecorator",
+        "role": "Adds responsibilities to the Component."
+      }
+    ],
+    "javaExample": "// Decorator: text formatter with composable behaviors\npublic interface TextFormatter {\n    String format(String text);\n}\n\n// ConcreteComponent\npublic class PlainTextFormatter implements TextFormatter {\n    @Override\n    public String format(String text) { return text; }\n}\n\n// Base Decorator\npublic abstract class TextFormatterDecorator implements TextFormatter {\n    protected final TextFormatter wrapped;\n    public TextFormatterDecorator(TextFormatter wrapped) { this.wrapped = wrapped; }\n}\n\n// ConcreteDecorator 1: uppercase\npublic class UpperCaseDecorator extends TextFormatterDecorator {\n    public UpperCaseDecorator(TextFormatter wrapped) { super(wrapped); }\n    @Override\n    public String format(String text) { return wrapped.format(text).toUpperCase(); }\n}\n\n// ConcreteDecorator 2: trim whitespace\npublic class TrimDecorator extends TextFormatterDecorator {\n    public TrimDecorator(TextFormatter wrapped) { super(wrapped); }\n    @Override\n    public String format(String text) { return wrapped.format(text).trim(); }\n}\n\n// ConcreteDecorator 3: add brackets\npublic class BracketDecorator extends TextFormatterDecorator {\n    public BracketDecorator(TextFormatter wrapped) { super(wrapped); }\n    @Override\n    public String format(String text) { return \"[\" + wrapped.format(text) + \"]\"; }\n}\n\n// Usage — compose behaviors at runtime\nTextFormatter formatter = new BracketDecorator(\n    new UpperCaseDecorator(\n        new TrimDecorator(\n            new PlainTextFormatter()\n        )\n    )\n);\nSystem.out.println(formatter.format(\"  hello world  \"));  // [HELLO WORLD]",
+    "realWorldJava": "Java I/O is the canonical example: new BufferedReader(new InputStreamReader(new FileInputStream(\"file.txt\"))) chains three decorators. Each wraps the previous: FileInputStream reads bytes, InputStreamReader converts to chars, BufferedReader adds buffering. javax.servlet.http.HttpServletRequestWrapper and HttpServletResponseWrapper are Decorators that let filters add behavior. java.util.Collections.synchronizedList() and unmodifiableList() are single-method decorators.",
+    "pros": [
+      "More flexible than subclassing — behaviors can be combined at runtime in any order",
+      "Each decorator has a single, focused responsibility (SRP)",
+      "New behaviors can be added without modifying existing classes (OCP)"
+    ],
+    "cons": [
+      "Many small objects are created, which can complicate debugging (deep decorator stacks)",
+      "Order of wrapping matters — changing decorator order changes behavior",
+      "Identity checks (instanceof, ==) behave unexpectedly with decorated objects"
+    ],
+    "relatedPatterns": ["composite", "proxy", "strategy"],
+    "interviewTips": [
+      "Java I/O is the go-to example — trace FileInputStream -> InputStreamReader -> BufferedInputStream to show the chain",
+      "Distinguish Decorator (adds behavior, same interface) from Proxy (controls access, same interface) and Adapter (converts interface)",
+      "Note that Collections.synchronizedList() is a single-operation decorator — a simpler variant of the full pattern",
+      "The key insight: Decorator wraps the same interface, so the client doesn't know it's talking to a decorator chain"
+    ]
+  },
+  {
+    "id": "proxy",
+    "name": "Proxy",
+    "category": "Structural",
+    "intent": "Provide a surrogate or placeholder for another object to control access to it.",
+    "whenToUse": "Use when you need lazy initialization (virtual proxy), access control (protection proxy), remote object access (remote proxy), logging/caching without modifying the real subject (smart proxy), or AOP-style cross-cutting concerns.",
+    "participants": [
+      {
+        "name": "Subject",
+        "role": "Defines the common interface for RealSubject and Proxy so a proxy can be used anywhere a RealSubject is expected."
+      },
+      {
+        "name": "RealSubject",
+        "role": "Defines the real object that the proxy represents."
+      },
+      {
+        "name": "Proxy",
+        "role": "Maintains a reference to the RealSubject. Controls access to it and may be responsible for creating and deleting it."
+      }
+    ],
+    "javaExample": "// Proxy: JDK Dynamic Proxy for logging/timing cross-cutting concerns\nimport java.lang.reflect.*;\n\npublic interface UserService {\n    String findUser(int id);\n    void saveUser(String name);\n}\n\npublic class UserServiceImpl implements UserService {\n    @Override\n    public String findUser(int id) {\n        return \"User-\" + id;  // real implementation\n    }\n    @Override\n    public void saveUser(String name) {\n        System.out.println(\"Saving \" + name);\n    }\n}\n\n// InvocationHandler intercepts all method calls\npublic class LoggingHandler implements InvocationHandler {\n    private final Object target;\n    public LoggingHandler(Object target) { this.target = target; }\n\n    @Override\n    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {\n        long start = System.currentTimeMillis();\n        System.out.println(\">> Calling \" + method.getName());\n        Object result = method.invoke(target, args);  // delegate to real subject\n        long elapsed = System.currentTimeMillis() - start;\n        System.out.println(\"<< \" + method.getName() + \" took \" + elapsed + \"ms\");\n        return result;\n    }\n}\n\n// Usage\nUserService real = new UserServiceImpl();\nUserService proxy = (UserService) Proxy.newProxyInstance(\n    real.getClass().getClassLoader(),\n    new Class<?>[]{ UserService.class },\n    new LoggingHandler(real)\n);\nproxy.findUser(42);  // logs timing without changing UserServiceImpl",
+    "realWorldJava": "Spring AOP uses JDK dynamic proxies (for interface-based classes) and CGLIB proxies (for class-based) to implement @Transactional, @Cacheable, and @Async. Hibernate uses CGLIB proxies for lazy-loaded entity associations — a field annotated @ManyToOne is a proxy until first accessed. java.rmi stubs are remote proxies. Spring Security's SecurityInterceptor is a protection proxy.",
+    "pros": [
+      "Can add cross-cutting concerns (logging, security, caching) without modifying the real subject",
+      "Controls access to expensive resources via virtual or remote proxies",
+      "Transparent to clients — they interact with the same interface"
+    ],
+    "cons": [
+      "JDK dynamic proxy requires an interface — cannot proxy concrete classes without CGLIB or ByteBuddy",
+      "Adds indirection which can complicate debugging and stack traces",
+      "Response time increases slightly due to reflection overhead in JDK proxies"
+    ],
+    "relatedPatterns": ["decorator", "adapter", "facade"],
+    "interviewTips": [
+      "Spring AOP is the most important real-world answer — explain that @Transactional works by wrapping your bean in a proxy that starts/commits/rolls back the transaction around your method",
+      "JDK proxy requires an interface; CGLIB subclasses the target class — this explains why @Transactional on final methods doesn't work in Spring",
+      "Distinguish Proxy (same interface, controls access) from Decorator (same interface, adds behavior) — Proxy is about control, Decorator is about enhancement",
+      "Hibernate's lazy loading is a virtual proxy — the entity proxy is returned immediately, database query happens on first field access"
+    ]
+  },
+  {
+    "id": "adapter",
+    "name": "Adapter",
+    "category": "Structural",
+    "intent": "Convert the interface of a class into another interface that clients expect. Adapter lets classes work together that couldn't otherwise because of incompatible interfaces.",
+    "whenToUse": "Use when you want to use an existing class but its interface is incompatible with what you need. Common when integrating third-party libraries, legacy code, or when bridging between two systems with different APIs.",
+    "participants": [
+      {
+        "name": "Target",
+        "role": "Defines the domain-specific interface that the Client uses."
+      },
+      {
+        "name": "Client",
+        "role": "Collaborates with objects conforming to the Target interface."
+      },
+      {
+        "name": "Adaptee",
+        "role": "Defines an existing interface that needs adapting."
+      },
+      {
+        "name": "Adapter",
+        "role": "Adapts the interface of Adaptee to the Target interface."
+      }
+    ],
+    "javaExample": "// Adapter: legacy XML logger adapted to modern SLF4J-style Logger interface\n\n// Target interface (what new code expects)\npublic interface Logger {\n    void info(String message);\n    void error(String message, Throwable cause);\n}\n\n// Adaptee: legacy system with incompatible interface\npublic class XmlLegacyLogger {\n    public void logInfo(String component, String xml) {\n        System.out.println(\"<log level='INFO' component='\" + component + \"'>\" + xml + \"</log>\");\n    }\n    public void logError(String component, String xml, Exception ex) {\n        System.out.println(\"<log level='ERROR'>\" + xml + \" \" + ex.getMessage() + \"</log>\");\n    }\n}\n\n// Object Adapter (preferred in Java — uses composition)\npublic class XmlLoggerAdapter implements Logger {\n    private final XmlLegacyLogger legacy;  // composition over inheritance\n    private final String component;\n\n    public XmlLoggerAdapter(XmlLegacyLogger legacy, String component) {\n        this.legacy = legacy;\n        this.component = component;\n    }\n\n    @Override\n    public void info(String message) {\n        legacy.logInfo(component, \"<message>\" + message + \"</message>\");\n    }\n\n    @Override\n    public void error(String message, Throwable cause) {\n        legacy.logError(component, \"<message>\" + message + \"</message>\",\n            cause instanceof Exception e ? e : new RuntimeException(cause));\n    }\n}\n\n// New code uses Logger; legacy system is hidden behind the adapter\nLogger log = new XmlLoggerAdapter(new XmlLegacyLogger(), \"PaymentService\");\nlog.info(\"Payment processed\");\nlog.error(\"Payment failed\", new RuntimeException(\"timeout\"));",
+    "realWorldJava": "Arrays.asList() adapts an array to the List interface. Collections.unmodifiableList() adapts a mutable List into a read-only List. InputStreamReader adapts an InputStream (bytes) to a Reader (characters). Spring's HandlerAdapter adapts various controller types (@Controller, HttpRequestHandler, Servlet) to a unified interface that DispatcherServlet understands.",
+    "pros": [
+      "Enables collaboration between incompatible interfaces without modifying existing code",
+      "Single Responsibility: the adapter isolates the interface conversion logic",
+      "Open/Closed: new adapters can be added without changing client or adaptee"
+    ],
+    "cons": [
+      "Increases complexity — another layer of indirection is added",
+      "Sometimes it's cleaner to modify the original class if it is under your control",
+      "Class Adapter (via inheritance) works only for single inheritance — Java's object adapter (composition) is generally preferred"
+    ],
+    "relatedPatterns": ["decorator", "proxy", "facade"],
+    "interviewTips": [
+      "Java's InputStreamReader is the classic example — it converts the byte-stream InputStream API to the character-stream Reader API",
+      "Distinguish Adapter (converts interfaces) from Facade (simplifies a complex system) and Decorator (adds behavior without interface change)",
+      "In Java, prefer Object Adapter (composition) over Class Adapter (multiple inheritance) since Java doesn't support multiple class inheritance",
+      "Mention that the Adapter pattern is also called 'Wrapper' — same concept as Collections.unmodifiableList wrapping a List"
+    ]
+  },
+  {
+    "id": "facade",
+    "name": "Facade",
+    "category": "Structural",
+    "intent": "Provide a unified interface to a set of interfaces in a subsystem. Facade defines a higher-level interface that makes the subsystem easier to use.",
+    "whenToUse": "Use when you want to provide a simple interface to a complex subsystem, when you want to layer your subsystems, or when there are many interdependent classes in a subsystem that clients don't need to understand in detail.",
+    "participants": [
+      {
+        "name": "Facade",
+        "role": "Knows which subsystem classes are responsible for a request. Delegates client requests to appropriate subsystem objects."
+      },
+      {
+        "name": "Subsystem Classes",
+        "role": "Implement subsystem functionality. Handle work assigned by the Facade object. Have no knowledge of the facade."
+      }
+    ],
+    "javaExample": "// Facade: email sending subsystem simplified\n\n// Complex subsystem classes\npublic class SmtpConnection {\n    public void connect(String host, int port) { System.out.println(\"Connected to \" + host + \":\" + port); }\n    public void authenticate(String user, String pass) { System.out.println(\"Authenticated\"); }\n    public void disconnect() { System.out.println(\"Disconnected\"); }\n}\n\npublic class MimeBuilder {\n    private String from, to, subject, body;\n    public MimeBuilder from(String f) { this.from = f; return this; }\n    public MimeBuilder to(String t) { this.to = t; return this; }\n    public MimeBuilder subject(String s) { this.subject = s; return this; }\n    public MimeBuilder body(String b) { this.body = b; return this; }\n    public String build() { return \"FROM:\" + from + \" TO:\" + to + \" SUBJECT:\" + subject; }\n}\n\npublic class SmtpSender {\n    public void send(SmtpConnection conn, String mimeMessage) {\n        System.out.println(\"Sending: \" + mimeMessage);\n    }\n}\n\n// Facade — hides all subsystem complexity\npublic class EmailFacade {\n    private static final String SMTP_HOST = \"smtp.example.com\";\n    private static final int    SMTP_PORT = 587;\n    private static final String USER = \"app@example.com\";\n    private static final String PASS = \"secret\";\n\n    public void sendEmail(String to, String subject, String body) {\n        SmtpConnection conn = new SmtpConnection();\n        MimeBuilder builder = new MimeBuilder();\n        SmtpSender sender = new SmtpSender();\n\n        conn.connect(SMTP_HOST, SMTP_PORT);\n        conn.authenticate(USER, PASS);\n\n        String message = builder\n            .from(USER).to(to).subject(subject).body(body)\n            .build();\n\n        sender.send(conn, message);\n        conn.disconnect();\n    }\n}\n\n// Client uses only the Facade — subsystem is invisible\nEmailFacade email = new EmailFacade();\nemail.sendEmail(\"user@example.com\", \"Welcome!\", \"Thanks for signing up.\");",
+    "realWorldJava": "Spring's JdbcTemplate is the most important Java example — it hides JDBC boilerplate (get connection, create statement, execute, handle ResultSet, close in finally) behind a single query() or update() call. SLF4J is a facade over Log4j, Logback, and java.util.logging — client code calls Logger.info() without knowing which logging backend is used. javax.faces.context.FacesContext is another framework-level facade.",
+    "pros": [
+      "Simplifies usage of complex subsystems — clients only need to know the Facade",
+      "Decouples clients from subsystem internals — subsystem can change without affecting clients",
+      "Promotes weak coupling between subsystems and their clients"
+    ],
+    "cons": [
+      "Risk of becoming a 'god object' — the Facade can grow too large and absorb too much responsibility",
+      "Does not prevent clients from using subsystem classes directly when they need fine-grained control",
+      "Can hide useful subsystem functionality behind an overly simplified API"
+    ],
+    "relatedPatterns": ["adapter", "proxy", "singleton"],
+    "interviewTips": [
+      "JdbcTemplate is the canonical answer — describe how it eliminates 10+ lines of try/catch/finally boilerplate in favor of a single query() call",
+      "SLF4J as a facade over logging backends is another excellent example — cite it for logging-related questions",
+      "Distinguish Facade (simplifies a subsystem) from Adapter (converts one interface to another) — both wrap other objects but for different reasons",
+      "Facade doesn't prevent access to the subsystem; it just provides a convenience layer"
+    ]
+  },
+  {
+    "id": "composite",
+    "name": "Composite",
+    "category": "Structural",
+    "intent": "Compose objects into tree structures to represent part-whole hierarchies. Composite lets clients treat individual objects and compositions of objects uniformly.",
+    "whenToUse": "Use when you need to represent hierarchies of objects (trees), and you want client code to treat leaf nodes and composite nodes identically. Classic examples: UI component trees, file system directories, expression trees.",
+    "participants": [
+      {
+        "name": "Component",
+        "role": "Declares the interface for objects in the composition. Optionally implements default behavior common to all classes."
+      },
+      {
+        "name": "Leaf",
+        "role": "Represents leaf objects in the composition (no children). Defines behavior for primitive objects."
+      },
+      {
+        "name": "Composite",
+        "role": "Defines behavior for components having children. Stores child components and implements child-related operations."
+      },
+      {
+        "name": "Client",
+        "role": "Manipulates objects in the composition through the Component interface."
+      }
+    ],
+    "javaExample": "// Composite: file system tree (File and Directory)\npublic interface FileSystemItem {\n    String getName();\n    long getSize();       // recursive for directories\n    void print(String indent);\n}\n\n// Leaf\npublic class File implements FileSystemItem {\n    private final String name;\n    private final long size;\n\n    public File(String name, long size) { this.name = name; this.size = size; }\n\n    @Override public String getName() { return name; }\n    @Override public long getSize() { return size; }\n    @Override public void print(String indent) {\n        System.out.println(indent + \"- \" + name + \" (\" + size + \"B)\");\n    }\n}\n\n// Composite\npublic class Directory implements FileSystemItem {\n    private final String name;\n    private final List<FileSystemItem> children = new ArrayList<>();\n\n    public Directory(String name) { this.name = name; }\n\n    public void add(FileSystemItem item) { children.add(item); }\n    public void remove(FileSystemItem item) { children.remove(item); }\n\n    @Override public String getName() { return name; }\n    @Override public long getSize() {\n        return children.stream().mapToLong(FileSystemItem::getSize).sum();\n    }\n    @Override public void print(String indent) {\n        System.out.println(indent + \"+ \" + name + \"/ (\" + getSize() + \"B)\");\n        children.forEach(c -> c.print(indent + \"  \"));\n    }\n}\n\n// Usage — client treats File and Directory uniformly\nDirectory root = new Directory(\"root\");\nDirectory src = new Directory(\"src\");\nsrc.add(new File(\"Main.java\", 1200));\nsrc.add(new File(\"App.java\", 800));\nroot.add(src);\nroot.add(new File(\"README.md\", 300));\nroot.print(\"\");\nSystem.out.println(\"Total: \" + root.getSize() + \"B\");  // 2300B",
+    "realWorldJava": "java.awt.Container extends Component — a Container can hold other Components (including other Containers), making the AWT/Swing hierarchy a Composite. javax.faces.component.UIComponent in JSF works the same way. In Spring's expression language (SpEL), expression nodes form a Composite tree. JSON/XML parsers often model document nodes as Composites.",
+    "pros": [
+      "Clients can treat leaf and composite objects uniformly — no special casing needed",
+      "Easy to add new component types — just add a new Leaf or Composite class",
+      "Natural fit for hierarchical data structures like file systems, org charts, or UI trees"
+    ],
+    "cons": [
+      "Can make the design overly general — hard to restrict which components can be children of which",
+      "Operations that don't apply to leaves (add/remove children) must still be handled — either by throwing exceptions or providing empty implementations",
+      "Deeply nested trees can be slow for operations that recurse the entire tree"
+    ],
+    "relatedPatterns": ["decorator", "iterator", "visitor"],
+    "interviewTips": [
+      "File system (File vs Directory) is the cleanest interview example — draw the tree and explain why getSize() works recursively without type-checking",
+      "Swing's Component/Container hierarchy is the Java stdlib example — Container.add() takes any Component, including other Containers",
+      "Clarify the design decision: should add/remove be on the Component interface (transparency) or only on Composite (safety)?",
+      "The key insight: the same method call (getSize, print) works correctly regardless of whether the node is a leaf or a subtree"
+    ]
+  },
+  {
+    "id": "strategy",
+    "name": "Strategy",
+    "category": "Behavioral",
+    "intent": "Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets the algorithm vary independently from clients that use it.",
+    "whenToUse": "Use when you have multiple variants of an algorithm and want to switch between them at runtime. Use to eliminate conditionals that select algorithm behavior. Ideal when different clients need different variants of the same behavior.",
+    "participants": [
+      {
+        "name": "Strategy",
+        "role": "Declares an interface common to all supported algorithms."
+      },
+      {
+        "name": "ConcreteStrategy",
+        "role": "Implements the algorithm using the Strategy interface."
+      },
+      {
+        "name": "Context",
+        "role": "Is configured with a ConcreteStrategy object. Maintains a reference to a Strategy object. May define an interface that lets Strategy access its data."
+      }
+    ],
+    "javaExample": "// Strategy: pluggable sorting for a product catalog\npublic record Product(String name, double price, int rating) {}\n\n// Strategy interface — in Java 8+ this is often a @FunctionalInterface\n@FunctionalInterface\npublic interface SortStrategy {\n    List<Product> sort(List<Product> products);\n}\n\n// ConcreteStrategy 1: sort by price ascending\npublic class PriceSortStrategy implements SortStrategy {\n    @Override\n    public List<Product> sort(List<Product> products) {\n        return products.stream()\n            .sorted(Comparator.comparingDouble(Product::price))\n            .collect(Collectors.toList());\n    }\n}\n\n// ConcreteStrategy 2: sort by rating descending\npublic class RatingSortStrategy implements SortStrategy {\n    @Override\n    public List<Product> sort(List<Product> products) {\n        return products.stream()\n            .sorted(Comparator.comparingInt(Product::rating).reversed())\n            .collect(Collectors.toList());\n    }\n}\n\n// Context: holds and delegates to the strategy\npublic class ProductCatalog {\n    private SortStrategy sortStrategy;\n\n    public ProductCatalog(SortStrategy strategy) { this.sortStrategy = strategy; }\n\n    // Strategy can be swapped at runtime\n    public void setSortStrategy(SortStrategy strategy) { this.sortStrategy = strategy; }\n\n    public List<Product> getSortedProducts(List<Product> products) {\n        return sortStrategy.sort(products);\n    }\n}\n\n// Usage — swap strategies at runtime\nProductCatalog catalog = new ProductCatalog(new PriceSortStrategy());\nList<Product> byPrice = catalog.getSortedProducts(products);\n\ncatalog.setSortStrategy(new RatingSortStrategy());\nList<Product> byRating = catalog.getSortedProducts(products);\n\n// Java 8 lambda — anonymous ConcreteStrategy\ncatalog.setSortStrategy(prods -> prods.stream()\n    .sorted(Comparator.comparing(Product::name))\n    .collect(Collectors.toList()));",
+    "realWorldJava": "java.util.Comparator is the most widely-used Strategy in the JDK — it's a @FunctionalInterface that encapsulates a comparison algorithm, passable to Collections.sort() and List.sort(). java.util.concurrent.ThreadPoolExecutor accepts a RejectedExecutionHandler strategy. Spring Security's AuthenticationStrategy encapsulates session management behavior. javax.servlet.http.HttpServlet's service() dispatches to doGet/doPost strategies.",
+    "pros": [
+      "Eliminates conditional statements that select behavior — replaces if/switch with polymorphism",
+      "Strategies can be swapped at runtime without changing the context",
+      "Each strategy is independently testable",
+      "Open/Closed: new strategies can be added without modifying the context"
+    ],
+    "cons": [
+      "Clients must be aware of different strategies to choose the right one",
+      "Increased number of objects — each strategy requires its own class (mitigated by Java 8 lambdas)",
+      "Strategy and Context may share data via interface or parameters, which can create coupling"
+    ],
+    "relatedPatterns": ["template-method", "decorator", "factory-method"],
+    "interviewTips": [
+      "Comparator is the most important Strategy example in Java — every developer uses it daily without necessarily naming the pattern",
+      "Java 8 lambdas are anonymous ConcreteStrategies — this shows you understand how functional interfaces map to GoF patterns",
+      "Compare Strategy (composition, runtime swap) vs Template Method (inheritance, compile-time fixed skeleton) — they solve similar problems differently",
+      "Mention that Strategy eliminates large if-else chains: instead of 'if sortType == PRICE... else if sortType == RATING...' you have polymorphism"
+    ]
+  },
+  {
+    "id": "observer",
+    "name": "Observer",
+    "category": "Behavioral",
+    "intent": "Define a one-to-many dependency between objects so that when one object changes state, all its dependents are notified and updated automatically.",
+    "whenToUse": "Use when a change to one object requires changing others, and you don't know how many objects need to change. Use for event-driven systems where publishers should not be coupled to specific subscribers.",
+    "participants": [
+      {
+        "name": "Subject",
+        "role": "Knows its observers. Provides an interface for attaching and detaching Observer objects."
+      },
+      {
+        "name": "Observer",
+        "role": "Defines an updating interface for objects that should be notified of changes in a Subject."
+      },
+      {
+        "name": "ConcreteSubject",
+        "role": "Stores state of interest to ConcreteObserver objects. Sends notification when state changes."
+      },
+      {
+        "name": "ConcreteObserver",
+        "role": "Maintains a reference to a ConcreteSubject object. Implements the Observer updating interface."
+      }
+    ],
+    "javaExample": "// Observer: stock price feed with multiple subscribers\n\n// Observer interface (functional interface for Java 8 lambda support)\n@FunctionalInterface\npublic interface StockObserver {\n    void onPriceChange(String ticker, double newPrice);\n}\n\n// Subject\npublic class StockFeed {\n    private final Map<String, List<StockObserver>> subscribers = new HashMap<>();\n    private final Map<String, Double> prices = new HashMap<>();\n\n    public void subscribe(String ticker, StockObserver observer) {\n        subscribers.computeIfAbsent(ticker, k -> new ArrayList<>()).add(observer);\n    }\n\n    public void unsubscribe(String ticker, StockObserver observer) {\n        List<StockObserver> obs = subscribers.get(ticker);\n        if (obs != null) obs.remove(observer);\n    }\n\n    public void updatePrice(String ticker, double newPrice) {\n        prices.put(ticker, newPrice);\n        notifyObservers(ticker, newPrice);\n    }\n\n    private void notifyObservers(String ticker, double price) {\n        List<StockObserver> obs = subscribers.getOrDefault(ticker, List.of());\n        // iterate over a copy to avoid ConcurrentModificationException\n        new ArrayList<>(obs).forEach(o -> o.onPriceChange(ticker, price));\n    }\n}\n\n// Usage — lambda ConcreteObservers\nStockFeed feed = new StockFeed();\nfeed.subscribe(\"AAPL\", (ticker, price) ->\n    System.out.println(\"Portfolio alert: \" + ticker + \" = $\" + price));\nfeed.subscribe(\"AAPL\", (ticker, price) ->\n    System.out.println(\"Chart updated: \" + ticker + \" = $\" + price));\n\nfeed.updatePrice(\"AAPL\", 182.50);  // both observers are notified",
+    "realWorldJava": "java.util.EventListener is the Observer interface in AWT/Swing — ActionListener, MouseListener, etc. are all ConcreteObservers. Spring's ApplicationEventPublisher and ApplicationListener implement Observer for application events. java.util.Observable (deprecated in Java 9) was the original GoF implementation. Reactor's Flux/Mono and RxJava's Observable implement a reactive variant of this pattern.",
+    "pros": [
+      "Loose coupling — Subject knows only that observers implement a notification interface",
+      "Supports broadcast communication — one change notifies many observers",
+      "New observers can be added without modifying the Subject (OCP)"
+    ],
+    "cons": [
+      "Observers are notified in an unspecified order — order-dependent logic is fragile",
+      "Memory leaks if observers are not properly unsubscribed (the 'lapsed listener' problem)",
+      "Cascading updates can cause performance issues in deeply connected observer networks"
+    ],
+    "relatedPatterns": ["mediator", "singleton", "strategy"],
+    "interviewTips": [
+      "Swing's ActionListener (button.addActionListener(e -> ...)) is the most familiar Java Observer example — every Java developer has used it",
+      "Always mention the 'lapsed listener' memory leak — an object that registers as a listener but is never unregistered will be retained by the Subject indefinitely",
+      "Spring ApplicationEvents are the enterprise Observer — @EventListener methods are ConcreteObservers registered without explicit subscribe/unsubscribe calls",
+      "Reactive streams (Project Reactor, RxJava) are the modern evolution of Observer — adds backpressure and async composition"
+    ]
+  },
+  {
+    "id": "template-method",
+    "name": "Template Method",
+    "category": "Behavioral",
+    "intent": "Define the skeleton of an algorithm in an operation, deferring some steps to subclasses. Template Method lets subclasses redefine certain steps of an algorithm without changing the algorithm's structure.",
+    "whenToUse": "Use when multiple classes share the same algorithm structure but differ in specific steps. Use to control which parts of a superclass algorithm subclasses can override. Common in frameworks where the framework defines the skeleton and applications fill in the details.",
+    "participants": [
+      {
+        "name": "AbstractClass",
+        "role": "Defines abstract primitive operations that concrete subclasses define to implement steps of an algorithm. Implements a template method defining the skeleton."
+      },
+      {
+        "name": "ConcreteClass",
+        "role": "Implements the primitive operations to carry out subclass-specific steps of the algorithm."
+      }
+    ],
+    "javaExample": "// Template Method: data export pipeline with format-specific steps\npublic abstract class DataExporter {\n\n    // Template method — defines the invariant skeleton\n    // Made final so subclasses cannot alter the algorithm order\n    public final void export(List<Map<String, Object>> records, String outputPath) {\n        List<Map<String, Object>> filtered = filterRecords(records);  // hook\n        String header = buildHeader(records);                          // abstract\n        StringBuilder body = new StringBuilder();\n        for (Map<String, Object> record : filtered) {\n            body.append(formatRecord(record));                         // abstract\n        }\n        String footer = buildFooter(filtered.size());                  // hook\n        String output = header + body + footer;\n        writeToFile(output, outputPath);                               // concrete\n        System.out.println(\"Exported \" + filtered.size() + \" records to \" + outputPath);\n    }\n\n    // Abstract steps — subclasses MUST implement\n    protected abstract String buildHeader(List<Map<String, Object>> records);\n    protected abstract String formatRecord(Map<String, Object> record);\n\n    // Hook methods — subclasses MAY override (default: no-op)\n    protected List<Map<String, Object>> filterRecords(List<Map<String, Object>> records) {\n        return records;  // default: no filtering\n    }\n    protected String buildFooter(int count) {\n        return \"\";  // default: empty footer\n    }\n\n    // Concrete step — same for all subclasses\n    private void writeToFile(String content, String path) {\n        System.out.println(\"Writing to: \" + path);\n    }\n}\n\n// CSV ConcreteClass\npublic class CsvExporter extends DataExporter {\n    @Override\n    protected String buildHeader(List<Map<String, Object>> records) {\n        return records.isEmpty() ? \"\" : String.join(\",\", records.get(0).keySet()) + \"\\n\";\n    }\n    @Override\n    protected String formatRecord(Map<String, Object> record) {\n        return String.join(\",\", record.values().stream().map(Object::toString).toList()) + \"\\n\";\n    }\n}",
+    "realWorldJava": "Spring's JdbcTemplate.query() is a Template Method — it handles connection acquisition, statement creation, exception mapping, and resource cleanup, while the RowMapper callback fills in the result-mapping step. AbstractList in the JDK defines iterator() and other operations as template methods, requiring subclasses to implement only get(int) and size(). HttpServlet.service() dispatches to doGet()/doPost() — the dispatch skeleton is fixed, the handler methods are the variable steps.",
+    "pros": [
+      "Code reuse — the invariant algorithm skeleton lives in one place (superclass)",
+      "Hollywood Principle: 'Don't call us, we'll call you' — framework calls the subclass hooks",
+      "Hook methods provide optional extension points without forcing subclasses to override everything"
+    ],
+    "cons": [
+      "Requires inheritance — clients must subclass to vary behavior, unlike Strategy which uses composition",
+      "Inverting control can make the flow harder to follow (call stack jumps between super and subclass)",
+      "Liskov Substitution Principle can be violated if subclasses override steps in unexpected ways"
+    ],
+    "relatedPatterns": ["strategy", "factory-method", "observer"],
+    "interviewTips": [
+      "JdbcTemplate is the single best answer — it reduces 15 lines of JDBC boilerplate to a 3-line query() call, with the RowMapper as the variable step",
+      "Distinguish Template Method (inheritance, algorithm skeleton fixed) from Strategy (composition, entire algorithm replaceable)",
+      "Explain the Hollywood Principle: the template calls the hook — subclasses don't call super.export(), the superclass calls subclass.formatRecord()",
+      "Hook methods vs abstract methods: hooks are optional extensions with a default impl; abstract methods are mandatory steps the subclass must provide"
+    ]
+  },
+  {
+    "id": "command",
+    "name": "Command",
+    "category": "Behavioral",
+    "intent": "Encapsulate a request as an object, thereby letting you parameterize clients with different requests, queue or log requests, and support undoable operations.",
+    "whenToUse": "Use when you need to parameterize objects with operations, queue operations for deferred execution, support undo/redo, log operations for auditing, or build transactional systems where operations can be rolled back.",
+    "participants": [
+      {
+        "name": "Command",
+        "role": "Declares an interface for executing an operation."
+      },
+      {
+        "name": "ConcreteCommand",
+        "role": "Defines a binding between a Receiver object and an action. Implements execute() by invoking the corresponding operation(s) on Receiver."
+      },
+      {
+        "name": "Client",
+        "role": "Creates a ConcreteCommand object and sets its receiver."
+      },
+      {
+        "name": "Invoker",
+        "role": "Asks the command to carry out the request."
+      },
+      {
+        "name": "Receiver",
+        "role": "Knows how to perform the operations associated with carrying out a request."
+      }
+    ],
+    "javaExample": "// Command: text editor with undo/redo support\npublic interface EditorCommand {\n    void execute();\n    void undo();\n}\n\n// Receiver\npublic class TextDocument {\n    private StringBuilder content = new StringBuilder();\n    public void insert(int pos, String text) { content.insert(pos, text); }\n    public void delete(int pos, int length) { content.delete(pos, pos + length); }\n    public String getContent() { return content.toString(); }\n}\n\n// ConcreteCommand — encapsulates all data needed to execute and undo\npublic class InsertTextCommand implements EditorCommand {\n    private final TextDocument doc;\n    private final int position;\n    private final String text;\n\n    public InsertTextCommand(TextDocument doc, int position, String text) {\n        this.doc = doc; this.position = position; this.text = text;\n    }\n\n    @Override public void execute() { doc.insert(position, text); }\n    @Override public void undo()    { doc.delete(position, text.length()); }\n}\n\n// Invoker — maintains command history for undo/redo\npublic class CommandHistory {\n    private final Deque<EditorCommand> undoStack = new ArrayDeque<>();\n    private final Deque<EditorCommand> redoStack = new ArrayDeque<>();\n\n    public void execute(EditorCommand cmd) {\n        cmd.execute();\n        undoStack.push(cmd);\n        redoStack.clear();  // clear redo stack on new action\n    }\n\n    public void undo() {\n        if (!undoStack.isEmpty()) {\n            EditorCommand cmd = undoStack.pop();\n            cmd.undo();\n            redoStack.push(cmd);\n        }\n    }\n\n    public void redo() {\n        if (!redoStack.isEmpty()) {\n            EditorCommand cmd = redoStack.pop();\n            cmd.execute();\n            undoStack.push(cmd);\n        }\n    }\n}\n\n// Usage\nTextDocument doc = new TextDocument();\nCommandHistory history = new CommandHistory();\nhistory.execute(new InsertTextCommand(doc, 0, \"Hello\"));\nhistory.execute(new InsertTextCommand(doc, 5, \" World\"));\nSystem.out.println(doc.getContent());  // Hello World\nhistory.undo();\nSystem.out.println(doc.getContent());  // Hello",
+    "realWorldJava": "java.lang.Runnable and java.util.concurrent.Callable are the JDK Command interfaces — they encapsulate a task (the operation) as an object that can be submitted to an ExecutorService (the Invoker). java.util.concurrent.Future represents the result of a Command submitted for async execution. Spring's @Transactional uses a Command-like rollback mechanism. JDBC's PreparedStatement.addBatch() / executeBatch() queues SQL commands for batch execution.",
+    "pros": [
+      "Decouples the object that invokes an operation from the one that knows how to perform it",
+      "Commands are first-class objects — they can be queued, logged, serialized, and replayed",
+      "Undo/redo is straightforward — each command stores enough state to reverse itself",
+      "Composite Commands (macros) can be built by combining simpler commands"
+    ],
+    "cons": [
+      "Can result in many small Command classes for each distinct operation",
+      "The Command must store sufficient state for undo — for large objects this can be memory-intensive",
+      "Sequence of commands can be hard to reason about as systems grow"
+    ],
+    "relatedPatterns": ["composite", "memento", "prototype"],
+    "interviewTips": [
+      "Runnable is the simplest Java Command — it encapsulates 'do something' as an object passable to threads or ExecutorService",
+      "The undo/redo stack is the most distinctive feature of Command — make sure you can explain how execute() and undo() make this possible",
+      "ExecutorService is the Invoker — it queues Runnable/Callable Commands and decides when to execute them",
+      "Mention that JDBC batch operations (addBatch/executeBatch) are a practical application — commands are collected, then fired together for efficiency"
+    ]
+  },
+  {
+    "id": "chain-of-responsibility",
+    "name": "Chain of Responsibility",
+    "category": "Behavioral",
+    "intent": "Avoid coupling the sender of a request to its receiver by giving more than one object a chance to handle the request. Chain the receiving objects and pass the request along the chain until an object handles it.",
+    "whenToUse": "Use when more than one object may handle a request and the handler isn't known a priori. Use to issue requests to one of several objects without specifying the receiver explicitly. Common in middleware, filter pipelines, and event-handling systems.",
+    "participants": [
+      {
+        "name": "Handler",
+        "role": "Defines an interface for handling requests. Optionally implements the successor link."
+      },
+      {
+        "name": "ConcreteHandler",
+        "role": "Handles requests it is responsible for. Can access its successor. If it can handle the request, it does so; otherwise it forwards to its successor."
+      },
+      {
+        "name": "Client",
+        "role": "Initiates the request to a ConcreteHandler object on the chain."
+      }
+    ],
+    "javaExample": "// Chain of Responsibility: HTTP request middleware pipeline\npublic abstract class RequestHandler {\n    private RequestHandler next;\n\n    // Fluent chain builder\n    public RequestHandler setNext(RequestHandler next) {\n        this.next = next;\n        return next;\n    }\n\n    // Template method — subclasses override handle()\n    public final void process(HttpRequest request) {\n        if (canHandle(request)) {\n            handle(request);\n        } else if (next != null) {\n            next.process(request);  // pass to next in chain\n        } else {\n            System.out.println(\"No handler for: \" + request.getUrl());\n        }\n    }\n\n    protected abstract boolean canHandle(HttpRequest request);\n    protected abstract void handle(HttpRequest request);\n}\n\n// ConcreteHandler 1: authentication check\npublic class AuthHandler extends RequestHandler {\n    @Override protected boolean canHandle(HttpRequest req) {\n        return req.getHeader(\"Authorization\") == null;\n    }\n    @Override protected void handle(HttpRequest req) {\n        System.out.println(\"[Auth] Rejected — no Authorization header\");\n    }\n}\n\n// ConcreteHandler 2: rate limiting\npublic class RateLimitHandler extends RequestHandler {\n    private final int maxRpm = 100;\n    @Override protected boolean canHandle(HttpRequest req) {\n        return getCurrentRpm(req.getClientIp()) > maxRpm;\n    }\n    @Override protected void handle(HttpRequest req) {\n        System.out.println(\"[RateLimit] Rejected — too many requests from \" + req.getClientIp());\n    }\n    private int getCurrentRpm(String ip) { return 50; }  // simplified\n}\n\n// ConcreteHandler 3: business logic (always handles if reached)\npublic class BusinessHandler extends RequestHandler {\n    @Override protected boolean canHandle(HttpRequest req) { return true; }\n    @Override protected void handle(HttpRequest req) {\n        System.out.println(\"[Business] Processing \" + req.getUrl());\n    }\n}\n\n// Build the chain\nRequestHandler chain = new AuthHandler();\nchain.setNext(new RateLimitHandler())\n     .setNext(new BusinessHandler());\nchain.process(request);",
+    "realWorldJava": "javax.servlet.Filter and FilterChain are the canonical Java Chain of Responsibility — each Filter calls chain.doFilter() to pass control to the next filter. Spring Security is built on a chain of SecurityFilter instances (UsernamePasswordAuthenticationFilter, BasicAuthenticationFilter, ExceptionTranslationFilter, etc.) where each handles its specific concern and passes to the next. Java's exception handling (try-catch with multiple catch blocks) is also a form of chain of responsibility.",
+    "pros": [
+      "Decouples sender from receiver — the sender doesn't need to know which handler will process its request",
+      "Flexible chain configuration — handlers can be added, removed, or reordered at runtime",
+      "Single Responsibility: each handler focuses on one specific concern"
+    ],
+    "cons": [
+      "No guarantee a request will be handled — it can fall off the end of the chain",
+      "Debugging is difficult — hard to trace which handler processed a request in a long chain",
+      "Performance degrades with very long chains if most requests must traverse many handlers"
+    ],
+    "relatedPatterns": ["composite", "command", "observer"],
+    "interviewTips": [
+      "Servlet Filter chain is the canonical Java answer — doFilter() is the 'pass to next handler' call; not calling it short-circuits the chain",
+      "Spring Security's filter chain is the enterprise example — each filter handles one security concern (auth, CSRF, session management) and the chain is ordered carefully",
+      "Distinguish from Strategy: Strategy selects one algorithm from many; CoR passes the request through a sequence, any of which may handle it",
+      "The critical design question: should the handler stop the chain after handling, or pass it on regardless? (Servlet filters can do both)"
+    ]
+  }
+]
