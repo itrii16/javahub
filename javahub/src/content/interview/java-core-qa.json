@@ -1,0 +1,110 @@
+[
+  {
+    "id": "iq-java-core-001",
+    "topicId": "java-core",
+    "subtopicId": "object-basics",
+    "question": "What is the difference between == and .equals() in Java?",
+    "tags": ["equality", "object", "strings"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "== compares object references (memory addresses). .equals() compares object content (overridable). For primitives, == compares values.",
+      "full": "**== (reference equality):** compares whether two variables point to the exact same object in memory. For primitives (int, boolean, etc.) it compares values directly since they are not objects.\n\n**equals() (logical equality):** an overridable method on Object that compares content. String, Integer, and all value types override it to compare by value.\n\n```java\nString a = new String(\"hello\");\nString b = new String(\"hello\");\na == b        // false — different objects\na.equals(b)   // true  — same content\n\n// String pool interning:\nString x = \"hello\";\nString y = \"hello\";\nx == y        // true — same interned literal (implementation detail, avoid relying on)\n```\n\n**Gotcha:** null.equals() throws NPE. Prefer Objects.equals(a, b) which handles null safely. Always override hashCode() when you override equals() — the contract requires equal objects to have equal hash codes."
+    },
+    "trickyFollowUp": {
+      "question": "You override equals() but not hashCode() in a class, then use instances as HashMap keys. What goes wrong?",
+      "answer": "HashMap uses hashCode() to find the bucket, then equals() to find the key. If two equal objects have different hash codes (because hashCode() wasn't overridden and uses the default identity hash), they land in different buckets and map.get() returns null even though the key is logically present. Always override both."
+    }
+  },
+  {
+    "id": "iq-java-core-002",
+    "topicId": "java-core",
+    "subtopicId": "comparisons",
+    "question": "Explain the difference between Comparable and Comparator.",
+    "tags": ["sorting", "comparisons", "generics"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "Comparable defines the natural ordering of a class (one way to sort, baked into the class). Comparator is an external strategy that defines a custom ordering without modifying the class.",
+      "full": "**Comparable<T>:** implemented by the class itself. Defines the single 'natural order'. Used by Collections.sort() and TreeSet/TreeMap by default.\n\n```java\nclass Employee implements Comparable<Employee> {\n    @Override\n    public int compareTo(Employee other) {\n        return Integer.compare(this.id, other.id); // natural order = by id\n    }\n}\n```\n\n**Comparator<T>:** external, reusable strategy. Multiple comparators can exist for the same type.\n\n```java\n// Comparator chaining (Java 8+)\nComparator<Employee> byNameThenAge =\n    Comparator.comparing(Employee::getName)\n              .thenComparingInt(Employee::getAge);\n\nlist.sort(byNameThenAge);\n```\n\n**When to use which:** Implement Comparable when there's one obvious natural order (e.g. Integer, String). Use Comparator for secondary sorts, sorting you don't own, or ad-hoc ordering."
+    }
+  },
+  {
+    "id": "iq-java-core-003",
+    "topicId": "java-core",
+    "subtopicId": "collections",
+    "question": "What happens when you modify a list while iterating over it with a for-each loop?",
+    "tags": ["collections", "iteration", "exceptions"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "You get a ConcurrentModificationException at runtime. The for-each loop uses an Iterator internally, which checks a modCount and throws if it detects structural modification.",
+      "full": "ArrayList and most collections maintain a `modCount` counter that increments on structural changes (add/remove). The Iterator created by for-each captures modCount at creation and checks it on each call to next(). Any add/remove during iteration causes a mismatch → ConcurrentModificationException.\n\n**Safe alternatives:**\n```java\n// 1. Iterator.remove() — safe removal during iteration\nIterator<String> it = list.iterator();\nwhile (it.hasNext()) {\n    if (it.next().startsWith(\"A\")) it.remove(); // OK\n}\n\n// 2. removeIf() — cleanest for conditional removal\nlist.removeIf(s -> s.startsWith(\"A\"));\n\n// 3. Collect to new list\nList<String> filtered = list.stream()\n    .filter(s -> !s.startsWith(\"A\"))\n    .collect(toList());\n\n// 4. CopyOnWriteArrayList — for concurrent access (no CME)\n```\n\n**Note:** CopyOnWriteArrayList never throws CME (iterates over a snapshot) but has O(n) write cost."
+    }
+  },
+  {
+    "id": "iq-java-core-004",
+    "topicId": "java-core",
+    "subtopicId": "collections",
+    "question": "How does HashMap handle hash collisions in Java 8+?",
+    "tags": ["hashmap", "data-structures", "internals"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "HashMap uses separate chaining: colliding entries go into a linked list at the same bucket. In Java 8+, when a bucket's list exceeds 8 entries and total capacity ≥ 64, the list is treeified into a Red-Black Tree for O(log n) lookup instead of O(n).",
+      "full": "**Basic structure:** HashMap is an array of buckets. Each bucket holds a linked list (or tree) of Map.Entry nodes.\n\n**Collision resolution (Java 8+):**\n1. Entry goes into the bucket at `hash(key) % capacity`\n2. If two keys map to the same bucket, they form a linked list\n3. **Treeification:** when a bucket exceeds `TREEIFY_THRESHOLD = 8` entries AND total capacity ≥ `MIN_TREEIFY_CAPACITY = 64`, the linked list is converted to a Red-Black Tree → O(log n) lookup instead of O(n)\n4. On resize (rehashing), trees may be un-treeified if they shrink below `UNTREEIFY_THRESHOLD = 6`\n\n**Rehashing:** when entries exceed `capacity × loadFactor` (default 0.75), the internal array doubles and all entries are rehashed.\n\n**Implication:** a pathological hash function that maps everything to one bucket causes O(n) → O(log n) worst case in Java 8+, compared to O(n) pre-Java 8. Still: write good hashCode()."
+    },
+    "trickyFollowUp": {
+      "question": "What is the default capacity and load factor of HashMap, and when does the first resize happen?",
+      "answer": "Default capacity = 16, load factor = 0.75. First resize happens when entries exceed 16 × 0.75 = 12. At that point, capacity doubles to 32, and all entries are rehashed into the new array."
+    }
+  },
+  {
+    "id": "iq-java-core-005",
+    "topicId": "java-core",
+    "subtopicId": "optional",
+    "question": "What is the difference between Optional.of() and Optional.ofNullable()?",
+    "tags": ["optional", "null-safety"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "Optional.of(value) throws NullPointerException if value is null. Optional.ofNullable(value) returns Optional.empty() if null. Use ofNullable when the value may legitimately be null.",
+      "full": "```java\nOptional.of(null)           // throws NullPointerException immediately\nOptional.ofNullable(null)   // returns Optional.empty() safely\nOptional.ofNullable(\"hi\")   // returns Optional.of(\"hi\")\n```\n\n**When to use which:**\n- `Optional.of()`: when you're certain the value is non-null (e.g. result of a computation that cannot return null). The NPE fires at the point of creation — closer to the source of the bug.\n- `Optional.ofNullable()`: when the value might be null — e.g. wrapping results from legacy APIs or nullable DB columns.\n\n**Anti-patterns to avoid:**\n```java\n// ❌ Don't use get() without isPresent()\noptional.get();  // throws NoSuchElementException if empty\n\n// ✅ Use orElse, orElseGet, orElseThrow, ifPresent\noptional.orElse(\"default\");\noptional.orElseThrow(() -> new ResourceNotFoundException(id));\noptional.ifPresent(v -> log.info(\"value: {}\", v));\n```"
+    }
+  },
+  {
+    "id": "iq-java-core-006",
+    "topicId": "java-core",
+    "subtopicId": "lambdas",
+    "question": "Explain method references — what are the four types?",
+    "tags": ["lambdas", "functional", "method-references"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "The four types are: (1) static method ref, (2) instance method of a particular instance, (3) instance method of an arbitrary instance of a type, (4) constructor reference.",
+      "full": "Method references are shorthand for lambdas that call a single method. They improve readability but have the same semantics.\n\n```java\n// 1. Static method reference: ClassName::staticMethod\nlist.stream().map(Integer::parseInt)   // same as s -> Integer.parseInt(s)\nlist.stream().forEach(System.out::println)\n\n// 2. Instance method of a particular object: instance::method\nString prefix = \"Hello\";\nlist.stream().filter(prefix::equals)   // same as s -> prefix.equals(s)\n\n// 3. Instance method of arbitrary instance of a type: ClassName::instanceMethod\nlist.stream().map(String::toUpperCase) // same as s -> s.toUpperCase()\nlist.stream().sorted(String::compareTo)\n\n// 4. Constructor reference: ClassName::new\nStream.generate(ArrayList::new)        // same as () -> new ArrayList<>()\nlist.stream().map(Person::new)         // same as name -> new Person(name)\n```\n\n**The functional interface determines which overload is selected.** If multiple constructors exist, the type context picks the right one."
+    }
+  },
+  {
+    "id": "iq-java-core-007",
+    "topicId": "java-core",
+    "subtopicId": "streams",
+    "question": "What is the difference between parallelStream() and stream()? When is parallel actually faster?",
+    "tags": ["streams", "concurrency", "performance"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "parallelStream() uses the ForkJoinPool.commonPool() to process elements in parallel. It is faster only for CPU-bound, independently processable, large datasets (typically 10k+ elements). For small collections or I/O-bound work, it is slower due to thread coordination overhead.",
+      "full": "**How parallelStream works:** splits the source into sub-tasks using the Spliterator, processes them on ForkJoinPool.commonPool() threads, then merges results.\n\n**When parallel IS faster:**\n- Large dataset (rule of thumb: 10 000+ elements)\n- CPU-bound, non-blocking computation per element\n- Elements are independently processable (no shared mutable state)\n- Source has good split characteristics (ArrayList splits well; LinkedList splits poorly)\n\n**When parallel is SLOWER or WRONG:**\n```java\n// ❌ Too small — threading overhead exceeds gain\nList.of(1,2,3).parallelStream().map(x -> x * 2).toList();\n\n// ❌ Shared mutable state — race conditions\nList<String> results = new ArrayList<>();\nlist.parallelStream().forEach(results::add); // data races!\n\n// ❌ I/O bound — threads just wait, no speedup\nlist.parallelStream().map(url -> httpClient.get(url));\n\n// ✅ CPU-bound, large, independent\nlargeList.parallelStream()\n    .map(img -> heavyImageProcess(img))\n    .collect(toList()); // safe — collect is thread-aware\n```\n\n**Always benchmark** before switching to parallel — measure with JMH on production-sized data."
+    },
+    "trickyFollowUp": {
+      "question": "What pool does parallelStream() use, and how can you control parallelism?",
+      "answer": "By default it uses ForkJoinPool.commonPool() which is shared across the JVM (including Kafka consumer threads, Spring async tasks, etc.). Control parallelism by submitting inside a custom ForkJoinPool: new ForkJoinPool(4).submit(() -> list.parallelStream()...).get()"
+    }
+  },
+  {
+    "id": "iq-java-core-008",
+    "topicId": "java-core",
+    "subtopicId": "lambdas",
+    "question": "What is 'effectively final', and why does it matter for lambdas?",
+    "tags": ["lambdas", "closures", "effectively-final"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "A variable is effectively final if it is never reassigned after initialisation. Lambdas can only capture effectively final local variables — this prevents concurrency bugs since lambdas can outlive the stack frame where the variable lives.",
+      "full": "**Why the restriction:** Local variables live on the stack. A lambda may outlive the stack frame (if passed to another thread). To avoid a lambda reading a variable that no longer exists or was changed by another thread, Java requires captured local variables to be effectively final.\n\n```java\nint limit = 10; // effectively final\nlist.stream().filter(n -> n > limit).toList(); // OK\n\nlimit = 20;     // reassignment → no longer effectively final\nlist.stream().filter(n -> n > limit).toList(); // compile error\n\n// Workaround for genuinely mutable state: use an array or AtomicInteger\nAtomicInteger count = new AtomicInteger();\nlist.forEach(n -> count.incrementAndGet()); // reference is final, object is mutable\n```\n\n**Instance fields and static fields** are not subject to this restriction — they don't live on the stack, so the lambda can access them freely (though shared mutation creates race conditions)."
+    }
+  }
+]

@@ -77,7 +77,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 ### F5 — Interview Prep Track (Phase 1.5 + Phase 5)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T26 | Interview Q&A content: types, 32+ questions across 4 topic groups | ⬜ Pending |
+| T26 | Interview Q&A content: types, 32+ questions across 4 topic groups | ✅ Done |
 | T27 | Interview prep UI: checklist, Q&A viewer, behavioral questions | ⬜ Pending |
 | T28 | System design section: 6 classic designs, interactive SVG diagram component | ⬜ Pending |
 

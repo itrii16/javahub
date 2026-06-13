@@ -1,0 +1,106 @@
+[
+  {
+    "id": "iq-ds-001",
+    "topicId": "data-structures",
+    "subtopicId": "hash-tables",
+    "question": "What is the time complexity of HashMap.get() in the average vs worst case? What causes the worst case?",
+    "tags": ["hashmap", "complexity", "data-structures"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "Average: O(1). Worst case: O(n) pre-Java 8, O(log n) in Java 8+ (treeified buckets). Worst case is caused by all keys hashing to the same bucket — either a bad hashCode() or a hash-flooding attack.",
+      "full": "**Average O(1):** with a good hash function, keys are distributed uniformly across buckets. get() computes hash → finds bucket → checks 1–2 entries.\n\n**Worst case causes:**\n1. **Bad hashCode():** all objects return the same hash (e.g. `return 42`) → all keys land in one bucket → O(n) linear search.\n2. **Hash flooding attacks:** adversary crafts keys with the same hash (e.g. in HTTP parameter parsing) → DoS via O(n) lookup. Defense: Java randomises String hashCode seed per JVM startup (Java 8+).\n\n**Java 8+ improvement (treeification):**\nWhen a bucket's chain exceeds `TREEIFY_THRESHOLD = 8` entries AND total capacity ≥ 64, the chain converts to a Red-Black Tree → O(log n) lookup even in the worst case.\n\n```java\n// ❌ Terrible hashCode — breaks HashMap\nclass BadKey {\n    @Override public int hashCode() { return 42; } // all keys → same bucket\n    @Override public boolean equals(Object o) { ... }\n}\n\n// ✅ Good hashCode — from Objects.hash()\nclass GoodKey {\n    String id; int value;\n    @Override public int hashCode() { return Objects.hash(id, value); }\n}\n```"
+    }
+  },
+  {
+    "id": "iq-ds-002",
+    "topicId": "data-structures",
+    "subtopicId": "linked-lists",
+    "question": "When would you use a LinkedList over an ArrayList?",
+    "tags": ["linkedlist", "arraylist", "data-structures"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "Almost never in practice. LinkedList wins for frequent O(1) insert/remove at the head or tail (deque operations). ArrayList wins for everything else — better cache locality, O(1) random access, lower per-element overhead.",
+      "full": "**ArrayList strengths:**\n- O(1) random access by index\n- Better cache locality (contiguous memory → CPU cache-friendly)\n- Lower memory overhead (no prev/next pointers)\n- O(1) amortised add at end\n\n**LinkedList strengths (and weaknesses):**\n```\nOperation         | ArrayList | LinkedList\n------------------|-----------|------------\nAccess by index   | O(1)      | O(n)\nInsert at head    | O(n)      | O(1)  ← LinkedList wins\nInsert at tail    | O(1)      | O(1)\nInsert at middle  | O(n)      | O(n)  (need to traverse to find position)\nMemory per node   | ~4 bytes  | ~40 bytes (object header + 2 pointers)\n```\n\n**When LinkedList makes sense:**\n- You need O(1) insert/remove from both ends: use as a Deque (`pollFirst`, `addLast`)\n- **BUT:** `ArrayDeque` is almost always faster than `LinkedList` even for deque operations (better cache performance)\n\n**Honest answer in an interview:** \"I'd almost always reach for ArrayList or ArrayDeque. The only time LinkedList wins is as a Deque, and even then ArrayDeque usually outperforms it due to cache locality.\""
+    }
+  },
+  {
+    "id": "iq-ds-003",
+    "topicId": "data-structures",
+    "subtopicId": "heaps",
+    "question": "Explain how a PriorityQueue works internally. What is the time complexity of add() and poll()?",
+    "tags": ["priority-queue", "heap", "data-structures"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "PriorityQueue is implemented as a binary min-heap stored in an array. add() inserts at the end and bubbles up — O(log n). poll() removes the root, moves the last element to the root, and sifts down — O(log n). peek() is O(1).",
+      "full": "**Internal structure:** binary heap in a flat array. For node at index i:\n- Left child: `2i + 1`\n- Right child: `2i + 2`  \n- Parent: `(i - 1) / 2`\n\n**add(element) — O(log n):**\n1. Place element at end of array\n2. Sift up (swap with parent while element < parent) — at most log n swaps\n\n**poll() → removes minimum — O(log n):**\n1. Swap root with last element\n2. Remove last\n3. Sift down (swap with smaller child while out of order) — at most log n swaps\n\n**peek() — O(1):** return array[0] (the minimum element)\n\n```java\nPriorityQueue<Integer> minHeap = new PriorityQueue<>(); // min by default\nPriorityQueue<Integer> maxHeap = new PriorityQueue<>(Comparator.reverseOrder());\n\n// k-largest elements pattern\npublic int[] kLargest(int[] nums, int k) {\n    PriorityQueue<Integer> minHeap = new PriorityQueue<>();\n    for (int n : nums) {\n        minHeap.offer(n);\n        if (minHeap.size() > k) minHeap.poll(); // evict smallest\n    }\n    return minHeap.stream().mapToInt(i->i).toArray(); // remaining k-largest\n}\n```\n\n**Heapify (build from existing array): O(n)** — not O(n log n) as commonly assumed. `new PriorityQueue<>(Collection)` heapifies in O(n)."
+    }
+  },
+  {
+    "id": "iq-ds-004",
+    "topicId": "algorithms",
+    "subtopicId": "graph-traversal",
+    "question": "What is the difference between BFS and DFS? When would you use each?",
+    "tags": ["BFS", "DFS", "graphs", "algorithms"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "BFS (queue) explores level-by-level — guarantees shortest path in unweighted graphs. DFS (stack/recursion) explores as deep as possible — useful for cycle detection, topological sort, and path existence. Both are O(V+E).",
+      "full": "**BFS — Breadth-First Search:**\n- Uses a **Queue**\n- Explores all neighbours at depth k before depth k+1\n- **Guarantees shortest path** (fewest edges) in unweighted graphs\n\n```java\nvoid bfs(Graph g, int start) {\n    Queue<Integer> q = new LinkedList<>();\n    boolean[] visited = new boolean[g.V()];\n    q.offer(start); visited[start] = true;\n    while (!q.isEmpty()) {\n        int node = q.poll();\n        for (int neighbor : g.adj(node)) {\n            if (!visited[neighbor]) {\n                visited[neighbor] = true;\n                q.offer(neighbor);\n            }\n        }\n    }\n}\n```\n\n**DFS — Depth-First Search:**\n- Uses **Stack** (or recursion)\n- Goes as deep as possible, backtracks when stuck\n- Does NOT guarantee shortest path\n\n**Use BFS for:** shortest path (unweighted), level-order tree traversal, finding all nodes within distance k.\n\n**Use DFS for:** cycle detection, topological sort, connected components, maze solving, backtracking (N-queens, permutations), detecting if a path exists.\n\n**Memory:** BFS can use O(V) memory (full level in queue). DFS uses O(depth) memory — better for very deep, narrow graphs."
+    }
+  },
+  {
+    "id": "iq-ds-005",
+    "topicId": "algorithms",
+    "subtopicId": "searching",
+    "question": "Explain binary search. What is the standard off-by-one mistake in the implementation?",
+    "tags": ["binary-search", "algorithms", "off-by-one"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "Binary search halves the search space each step — O(log n). The classic off-by-one mistake is in the right boundary: using `mid - 1` vs `mid` when the target isn't found at mid. The bug manifests as infinite loops or missed elements.",
+      "full": "**Binary search — O(log n), requires sorted array:**\n```java\n// Template: find exact target\npublic int binarySearch(int[] nums, int target) {\n    int left = 0, right = nums.length - 1; // inclusive bounds\n    while (left <= right) {               // ← <= not <\n        int mid = left + (right - left) / 2; // ← avoid overflow (not (l+r)/2)\n        if (nums[mid] == target)  return mid;\n        else if (nums[mid] < target) left = mid + 1;\n        else                         right = mid - 1;\n    }\n    return -1; // not found\n}\n```\n\n**Common off-by-one mistakes:**\n```java\n// ❌ Bug 1: right = nums.length (out-of-bounds on nums[right])\nint right = nums.length; // should be length - 1\n\n// ❌ Bug 2: while (left < right) — misses the last element\nwhile (left < right) // should be left <= right for exact search\n\n// ❌ Bug 3: mid = (left + right) / 2 — integer overflow when both are large\nint mid = (left + right) / 2; // use left + (right - left) / 2\n\n// ❌ Bug 4: left = mid instead of mid + 1 — infinite loop when left == mid\nleft = mid; // should be mid + 1\n```\n\n**Java built-in:** `Arrays.binarySearch(arr, target)` — returns index if found, `-(insertionPoint) - 1` if not found (negative = not present)."
+    },
+    "trickyFollowUp": {
+      "question": "How do you find the first occurrence of a target using binary search (not just any occurrence)?",
+      "answer": "Don't return immediately on match. Instead, when nums[mid] == target, record the result and continue searching left: `result = mid; right = mid - 1;`. This finds the leftmost occurrence. Similarly, for last occurrence: `result = mid; left = mid + 1;`."
+    }
+  },
+  {
+    "id": "iq-ds-006",
+    "topicId": "algorithms",
+    "subtopicId": "dynamic-programming",
+    "question": "What is dynamic programming? Explain with the Fibonacci example — top-down and bottom-up.",
+    "tags": ["dynamic-programming", "memoization", "algorithms"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Dynamic programming solves problems by breaking them into overlapping subproblems and storing results to avoid recomputation. Top-down (memoization) = recursion + cache. Bottom-up (tabulation) = iterative, fill a table from base cases upward.",
+      "full": "**DP applies when:** a problem has overlapping subproblems (same sub-calculation done repeatedly) and optimal substructure (optimal solution built from optimal sub-solutions).\n\n**Fibonacci — naive recursion: O(2^n)**\n```java\nint fib(int n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }\n// fib(5) computes fib(3) twice, fib(2) three times...\n```\n\n**Top-down (memoization): O(n) time, O(n) space**\n```java\nMap<Integer, Long> memo = new HashMap<>();\nlong fib(int n) {\n    if (n <= 1) return n;\n    if (memo.containsKey(n)) return memo.get(n); // cache hit\n    long result = fib(n-1) + fib(n-2);\n    memo.put(n, result);\n    return result;\n}\n```\n\n**Bottom-up (tabulation): O(n) time, O(1) space**\n```java\nlong fib(int n) {\n    if (n <= 1) return n;\n    long prev2 = 0, prev1 = 1;\n    for (int i = 2; i <= n; i++) {\n        long curr = prev1 + prev2;\n        prev2 = prev1;\n        prev1 = curr;\n    }\n    return prev1;\n}\n```\n\n**When to use which:**\n- Top-down: easier to reason about, only computes needed states\n- Bottom-up: no recursion stack, better cache performance, often faster in practice"
+    }
+  },
+  {
+    "id": "iq-ds-007",
+    "topicId": "algorithms",
+    "subtopicId": "sorting",
+    "question": "What is the time and space complexity of merge sort? Why is it preferred over quicksort in some cases?",
+    "tags": ["merge-sort", "sorting", "complexity"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "Merge sort: O(n log n) time in all cases, O(n) space. It's stable and has a guaranteed worst case. Quicksort averages O(n log n) but degrades to O(n²) on sorted/near-sorted input. Java uses merge sort (TimSort) for object arrays because it's stable.",
+      "full": "**Merge sort complexity:**\n- Best/Average/Worst time: **O(n log n)** — always\n- Space: **O(n)** — needs auxiliary array for merging\n- Stable: **Yes** — equal elements maintain relative order\n\n**Why the complexity:**\n- Divide: log n levels of splitting\n- Merge: O(n) work per level\n- Total: O(n log n)\n\n**Merge sort vs Quicksort:**\n| Property | Merge Sort | Quicksort |\n|---|---|---|\n| Worst case | O(n log n) | O(n²) |\n| Average | O(n log n) | O(n log n) |\n| Space | O(n) | O(log n) |\n| Stable | Yes | No (in-place) |\n| Cache | Poor (non-local) | Good |\n\n**Java's choice:**\n- `Arrays.sort(Object[])` uses **TimSort** (adaptive merge sort) — stable, good for partially-sorted data\n- `Arrays.sort(int[])` uses **Dual-Pivot Quicksort** — not stable, but faster for primitives (no equals() overhead)\n\n**Merge sort wins when:** data is on disk (sequential access), stability matters (preserving order of equal elements), or you need guaranteed O(n log n) worst case."
+    }
+  },
+  {
+    "id": "iq-ds-008",
+    "topicId": "data-structures",
+    "subtopicId": "linked-lists",
+    "question": "How would you detect a cycle in a linked list?",
+    "tags": ["linked-list", "cycle", "floyd", "algorithms"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Floyd's Cycle Detection (two-pointer / tortoise and hare): slow pointer moves 1 step, fast pointer moves 2 steps. If they meet, there's a cycle. If fast reaches null, no cycle. O(n) time, O(1) space.",
+      "full": "**Floyd's algorithm (O(n) time, O(1) space):**\n```java\npublic boolean hasCycle(ListNode head) {\n    ListNode slow = head, fast = head;\n    while (fast != null && fast.next != null) {\n        slow = slow.next;\n        fast = fast.next.next;\n        if (slow == fast) return true; // they met inside the cycle\n    }\n    return false; // fast reached end — no cycle\n}\n```\n\n**Why it works:** if there's a cycle of length L, fast gains 1 step per iteration on slow. They meet within L iterations after slow enters the cycle.\n\n**Finding the cycle start (bonus):**\n```java\n// After slow == fast, reset slow to head\n// Advance both one step at a time\n// They meet at the cycle start\nListNode cycleStart(ListNode head) {\n    ListNode slow = head, fast = head;\n    while (fast != null && fast.next != null) {\n        slow = slow.next;\n        fast = fast.next.next;\n        if (slow == fast) break;\n    }\n    if (fast == null || fast.next == null) return null; // no cycle\n    slow = head;\n    while (slow != fast) { slow = slow.next; fast = fast.next; }\n    return slow; // cycle start\n}\n```\n\n**Alternative (O(n) space):** store visited nodes in a HashSet. If a node is seen twice, there's a cycle at that node. Less elegant but obvious."
+    },
+    "trickyFollowUp": {
+      "question": "How would you find the length of the cycle?",
+      "answer": "After detecting the meeting point, keep one pointer fixed and advance the other until they meet again, counting steps. That count is the cycle length."
+    }
+  }
+]

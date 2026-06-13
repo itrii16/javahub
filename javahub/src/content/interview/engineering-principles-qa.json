@@ -1,0 +1,102 @@
+[
+  {
+    "id": "iq-eng-001",
+    "topicId": "solid",
+    "subtopicId": "srp",
+    "question": "Explain the Single Responsibility Principle with a real-world Java example.",
+    "tags": ["SOLID", "SRP", "design"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "A class should have exactly one reason to change — one job, one owner. If a class does validation, persistence, AND email sending, three different teams can break it. Split them.",
+      "full": "**Definition:** A class should have one, and only one, reason to change. 'Reason to change' = the stakeholder whose requirement changes would force a modification.\n\n```java\n// ❌ BAD: OrderService has three reasons to change\nclass OrderService {\n    void placeOrder(Order o) {\n        validate(o);           // validation rules change\n        db.save(o);            // DB schema changes\n        emailService.send(o);  // email template changes\n    }\n}\n\n// ✅ GOOD: each class has one reason to change\nclass OrderValidator  { void validate(Order o) { ... } }\nclass OrderRepository { void save(Order o)     { ... } }\nclass OrderNotifier   { void notify(Order o)   { ... } }\nclass OrderService {\n    void placeOrder(Order o) {\n        validator.validate(o);\n        repository.save(o);\n        notifier.notify(o);\n    }\n}\n```\n\n**Practical signal:** if you describe a class with 'and' (validates AND persists AND emails), it violates SRP. In Spring, this maps neatly to Controller → Service → Repository layers — each layer has one concern."
+    }
+  },
+  {
+    "id": "iq-eng-002",
+    "topicId": "oop",
+    "subtopicId": "composition",
+    "question": "What is the difference between composition and inheritance? When should you prefer composition?",
+    "tags": ["OOP", "composition", "inheritance", "design"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Inheritance is an 'is-a' relationship — the subclass IS a specialisation. Composition is a 'has-a' relationship — the class USES another class. Prefer composition when behaviour varies at runtime, when you don't control the base class, or when the hierarchy would become deep.",
+      "full": "**Inheritance:** compile-time relationship; tight coupling to the base class. Changes to the base class affect all subclasses (fragile base class problem).\n\n**Composition:** wire behaviour together via interfaces. Swap implementations at runtime or test time.\n\n```java\n// ❌ Inheritance — Logger is tightly coupled to FileOutput\nclass FileOutput { void write(String s) { /* file I/O */ } }\nclass Logger extends FileOutput { void log(String msg) { write(\"[LOG] \" + msg); } }\n// Problem: can't swap to DB output without changing class hierarchy\n\n// ✅ Composition — Logger depends on interface, not implementation\ninterface OutputChannel { void write(String s); }\nclass FileChannel    implements OutputChannel { ... }\nclass DatabaseChannel implements OutputChannel { ... }\n\nclass Logger {\n    private final OutputChannel channel;\n    Logger(OutputChannel channel) { this.channel = channel; } // inject at runtime\n    void log(String msg) { channel.write(\"[LOG] \" + msg); }\n}\n```\n\n**Use inheritance when:** the 'is-a' relationship is stable and the base class is designed for extension (Liskov-safe). Use composition by default — it's the more flexible, testable choice (Gang of Four: 'Favour object composition over class inheritance')."
+    }
+  },
+  {
+    "id": "iq-eng-003",
+    "topicId": "testing",
+    "subtopicId": "unit-tests",
+    "question": "What makes a unit test a good unit test? Explain the F.I.R.S.T. criteria.",
+    "tags": ["testing", "unit-tests", "FIRST"],
+    "difficulty": "Beginner",
+    "answer": {
+      "summary": "F.I.R.S.T.: Fast, Independent, Repeatable, Self-validating, Timely. A good unit test runs in milliseconds, doesn't share state with other tests, passes or fails the same way every time, has a clear assert, and is written close to the code.",
+      "full": "**F — Fast:** runs in < 100ms. No real I/O, no sleep(), no network calls. Use mocks/stubs for external deps.\n\n**I — Independent:** tests don't depend on each other. Any test can run first, last, or alone. No shared mutable state between tests (reset @BeforeEach).\n\n**R — Repeatable:** same result every time, in any environment (CI, Mac, Windows). No randomness, no time-sensitive logic. Stub Date/time with a fixed Clock.\n\n**S — Self-validating:** either passes or fails — no manual log inspection. Use assertThat/assertEquals, not print statements.\n\n**T — Timely:** written at the same time as the code (TDD) or immediately after. Tests written months later are harder to write and less likely to be written.\n\n```java\n// ✅ Good unit test\n@Test\nvoid order_with_negative_amount_should_throw() {\n    OrderService service = new OrderService(mockRepo, mockNotifier);\n    assertThatThrownBy(() -> service.placeOrder(new Order(-1)))\n        .isInstanceOf(IllegalArgumentException.class)\n        .hasMessageContaining(\"amount\");\n}\n```"
+    }
+  },
+  {
+    "id": "iq-eng-004",
+    "topicId": "solid",
+    "subtopicId": "ocp",
+    "question": "Explain the Open/Closed Principle. How do lambdas and the Strategy pattern help enforce it?",
+    "tags": ["SOLID", "OCP", "strategy", "lambdas"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Open/Closed: classes should be open for extension but closed for modification. Add new behaviour by writing new code, not editing existing code. Strategy pattern and lambdas let you inject new behaviour without touching existing logic.",
+      "full": "```java\n// ❌ VIOLATES OCP — adding a new discount type requires editing this class\nclass DiscountCalculator {\n    double calculate(Order o, String type) {\n        if (type.equals(\"STUDENT\")) return o.total * 0.1;\n        if (type.equals(\"SENIOR\"))  return o.total * 0.15;\n        // must edit this file to add new discount\n        return 0;\n    }\n}\n\n// ✅ FOLLOWS OCP — new discount = new class, no edits\ninterface DiscountStrategy { double apply(Order o); }\n\nclass StudentDiscount implements DiscountStrategy {\n    public double apply(Order o) { return o.total * 0.1; }\n}\nclass SeniorDiscount implements DiscountStrategy {\n    public double apply(Order o) { return o.total * 0.15; }\n}\n\nclass DiscountCalculator {\n    double calculate(Order o, DiscountStrategy strategy) {\n        return strategy.apply(o);\n    }\n}\n\n// With Java 8+ lambdas — DiscountStrategy is a functional interface:\ncalculator.calculate(order, o -> o.total * 0.2); // 20% off, zero new classes\n```\n\n**Key insight:** OCP doesn't mean zero changes ever — it means the stable core logic is closed, while extension points (interfaces/lambdas) are open."
+    }
+  },
+  {
+    "id": "iq-eng-005",
+    "topicId": "testing",
+    "subtopicId": "test-doubles",
+    "question": "What is the difference between a mock and a stub in testing?",
+    "tags": ["testing", "mocks", "stubs", "Mockito"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "A stub returns canned responses to calls made during the test — it's about state. A mock additionally verifies that specific calls were made — it's about behaviour. In Mockito, when().thenReturn() creates stubs; verify() turns them into mocks.",
+      "full": "**Test doubles taxonomy (Gerard Meszaros):**\n- **Dummy:** placeholder — passed but never used (null, empty object)\n- **Stub:** returns pre-programmed responses (`when(repo.findById(1)).thenReturn(user)`)\n- **Spy:** partial stub — wraps a real object, some methods stubbed, others real\n- **Mock:** pre-programmed with expectations about which calls they should receive; fails if unexpected calls occur\n- **Fake:** real working implementation (e.g. H2 in-memory DB instead of PostgreSQL)\n\n```java\n// Stub — just return a value\nwhen(paymentGateway.charge(any())).thenReturn(PaymentResult.success());\n\n// Mock — also verify the call happened\norderService.placeOrder(order);\nverify(paymentGateway, times(1)).charge(argThat(p -> p.amount() == order.total()));\nverify(emailService, never()).sendFailure(any()); // failure path NOT called\n```\n\n**Rule of thumb:** stub queries (return data), mock commands (verify side effects happened). Over-mocking (verifying every call) makes tests brittle — they break when implementation changes even if behaviour is correct."
+    }
+  },
+  {
+    "id": "iq-eng-006",
+    "topicId": "solid",
+    "subtopicId": "lsp",
+    "question": "What does the Liskov Substitution Principle say, and what is the classic Rectangle/Square violation?",
+    "tags": ["SOLID", "LSP", "inheritance"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "LSP: any instance of a subclass must be usable wherever the base class is expected, without breaking the program. Square-extends-Rectangle violates this because Square's setWidth also changes height, breaking code that assumes dimensions are independent.",
+      "full": "**Barbara Liskov's definition (1987):** If S is a subtype of T, objects of type T may be replaced with objects of type S without altering the correctness of the program.\n\n**The Rectangle/Square problem:**\n```java\nclass Rectangle {\n    int width, height;\n    void setWidth(int w)  { this.width = w; }\n    void setHeight(int h) { this.height = h; }\n    int area() { return width * height; }\n}\n\nclass Square extends Rectangle {\n    @Override void setWidth(int w)  { this.width = this.height = w; } // maintains square invariant\n    @Override void setHeight(int h) { this.width = this.height = h; }\n}\n\n// LSP violation — this code breaks for Square\nvoid printArea(Rectangle r) {\n    r.setWidth(5);\n    r.setHeight(4);\n    // Expected: 5 × 4 = 20\n    System.out.println(r.area()); // Rectangle: 20 ✓ Square: 16 ✗\n}\n```\n\n**Fix:** Don't extend — use a common Shape interface with immutable dimensions, or make Rectangle immutable. The invariant 'setWidth doesn't change height' is a precondition that Square breaks.\n\n**Practical LSP checks:** subclasses should not throw exceptions not declared by the base class, should not tighten preconditions, and should not weaken postconditions."
+    },
+    "trickyFollowUp": {
+      "question": "Does ArrayList satisfy LSP in relation to List? What about Collections.unmodifiableList()?",
+      "answer": "ArrayList satisfies LSP — any List contract is preserved. Collections.unmodifiableList() violates LSP if callers expect add() to work: it throws UnsupportedOperationException, which is not declared in the List contract. This is why List.of() (Java 9+) was introduced with clear immutability semantics from the start."
+    }
+  },
+  {
+    "id": "iq-eng-007",
+    "topicId": "design-patterns",
+    "subtopicId": "creational",
+    "question": "When would you use the Builder pattern instead of a constructor?",
+    "tags": ["builder", "design-patterns", "constructors"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Use Builder when a class has many parameters (especially optional ones), when parameter order is ambiguous, or when you need to enforce construction invariants before the object is created. It prevents the 'telescoping constructor' anti-pattern.",
+      "full": "**Problem (telescoping constructor):**\n```java\n// Which argument is which? Easy to swap two strings.\nnew Email(\"alice@x.com\", \"bob@x.com\", \"Hello\", null, true, false);\n```\n\n**Builder solution:**\n```java\nEmail email = Email.builder()\n    .from(\"alice@x.com\")\n    .to(\"bob@x.com\")\n    .subject(\"Hello\")\n    .htmlBody(true)\n    .build();\n```\n\n**In Java:** use Lombok's `@Builder` annotation to generate the builder automatically:\n```java\n@Builder\n@Value // immutable + all-args constructor\npublic class Email {\n    String from, to, subject, body;\n    boolean htmlBody;\n}\n```\n\n**When NOT to use Builder:** for simple objects with 1–3 required params, a constructor or static factory method is simpler and less boilerplate. Builder adds value at 4+ params or when some are optional."
+    }
+  },
+  {
+    "id": "iq-eng-008",
+    "topicId": "refactoring",
+    "subtopicId": "code-smells",
+    "question": "Name three common code smells and the refactoring that fixes each one.",
+    "tags": ["refactoring", "code-smells", "clean-code"],
+    "difficulty": "Mid",
+    "answer": {
+      "summary": "Three classic smells: Long Method (extract method), Feature Envy (move method), Primitive Obsession (introduce value object). Each has a mechanical refactoring that improves cohesion and readability.",
+      "full": "**1. Long Method → Extract Method**\nA method does too many things. Extract cohesive chunks into named private methods.\n```java\n// ❌ 60-line placeOrder() method\n// ✅ validateOrder(); chargePayment(); updateInventory(); sendConfirmation();\n```\n\n**2. Feature Envy → Move Method**\nA method uses data from another class more than its own.\n```java\n// ❌ OrderService.calculateShipping(Address address) uses Address fields heavily\n// ✅ Move calculateShipping() to Address class — the data and behaviour live together\n```\n\n**3. Primitive Obsession → Introduce Value Object**\nUsing primitives (String, int) where a rich object would add safety and meaning.\n```java\n// ❌ createUser(String email, String phone, int age)\n// ✅\nrecord Email(String value) { Email { validate(value); } }\nrecord Phone(String value) { Phone { validate(value); } }\ncreateUser(Email email, Phone phone, Age age); // compiler catches swapped args\n```\n\n**4. Bonus — Duplicate Code → Extract Method/Template Method**\nSame logic copy-pasted. Extract into a shared method. If in sibling classes, use Template Method or move to a shared utility."
+    }
+  }
+]
