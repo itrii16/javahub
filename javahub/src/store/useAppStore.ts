@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AppProgress, CardProgress, CardStatus } from '@/types'
-import type { AssessmentSession, AssessmentAnswer, UserProfile, QuizAttempt, SimAttempt } from '@/types/content'
+import type { AssessmentSession, AssessmentAnswer, UserProfile, QuizAttempt, SimAttempt, PrepStatus } from '@/types/content'
 import { SM2_DEFAULT_STATE } from '@/lib/sm2'
 
 const initialProgress: AppProgress = {
@@ -45,6 +45,9 @@ interface AppStore extends AppProgress {
   // Sim history
   simHistory: SimAttempt[]
   recordSimAttempt: (attempt: SimAttempt) => void
+  // Interview prep
+  interviewPrepStatus: Record<string, PrepStatus>
+  setPrepStatus: (topicId: string, status: PrepStatus) => void
 }
 
 export const useAppStore = create<AppStore>()(
@@ -75,6 +78,12 @@ export const useAppStore = create<AppStore>()(
       simHistory: [],
       recordSimAttempt: (attempt) => {
         set(state => ({ simHistory: [...state.simHistory, attempt] }))
+      },
+      interviewPrepStatus: {},
+      setPrepStatus: (topicId, status) => {
+        set(state => ({
+          interviewPrepStatus: { ...state.interviewPrepStatus, [topicId]: status },
+        }))
       },
 
 

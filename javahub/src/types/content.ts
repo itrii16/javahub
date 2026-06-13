@@ -156,6 +156,8 @@ export interface InterviewQuestion {
   trickyFollowUp?: TrickyFollowUp
 }
 
+export type PrepStatus = 'not-started' | 'in-progress' | 'ready'
+
 export type UserLevel = 'Junior' | 'Mid' | 'Senior'
 
 export interface UserProfile {
