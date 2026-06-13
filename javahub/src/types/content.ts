@@ -225,3 +225,27 @@ export interface JavaTimeline {
   releases: JavaRelease[]
   lastUpdated: string
 }
+
+// ─── Design Patterns ──────────────────────────────────────────────────────────
+
+export type PatternCategory = 'Creational' | 'Structural' | 'Behavioral'
+
+export interface PatternParticipant {
+  name: string
+  role: string
+}
+
+export interface DesignPattern {
+  id: string
+  name: string
+  category: PatternCategory
+  intent: string
+  whenToUse: string
+  participants: PatternParticipant[]
+  javaExample: string
+  realWorldJava: string
+  pros: string[]
+  cons: string[]
+  relatedPatterns: string[]
+  interviewTips: string[]
+}
