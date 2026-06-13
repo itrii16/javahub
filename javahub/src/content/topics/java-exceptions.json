@@ -1,0 +1,97 @@
+{
+  "id": "java-exceptions",
+  "title": "Java Exceptions",
+  "group": "Java Core",
+  "estimatedMinutes": 45,
+  "subtopics": [
+    {
+      "id": "exception-hierarchy",
+      "title": "Exception Hierarchy & Checked vs Unchecked",
+      "cards": [
+        {
+          "id": "java-exceptions-hierarchy-throwable",
+          "topicId": "java-exceptions",
+          "subtopicId": "exception-hierarchy",
+          "title": "Throwable Hierarchy",
+          "difficulty": "Beginner",
+          "explanation": "All exceptions in Java inherit from `Throwable`. The two main branches are `Error` (JVM-level problems like OutOfMemoryError — don't catch these) and `Exception`. Under `Exception`, the critical split is between checked exceptions (must be declared or caught at compile time) and unchecked exceptions (subclasses of `RuntimeException`). Every Java programmer must know this tree cold.",
+          "codeExample": "// Throwable\n//   ├── Error          (JVM failures — do NOT catch)\n//   │     ├── OutOfMemoryError\n//   │     ├── StackOverflowError\n//   │     └── AssertionError\n//   └── Exception\n//         ├── IOException          (checked)\n//         ├── SQLException         (checked)\n//         ├── CloneNotSupportedException (checked)\n//         └── RuntimeException     (unchecked)\n//               ├── NullPointerException\n//               ├── IllegalArgumentException\n//               ├── IllegalStateException\n//               ├── IndexOutOfBoundsException\n//               └── UnsupportedOperationException",
+          "whyItMatters": "Interviewers frequently ask you to draw or explain this hierarchy. Misclassifying checked vs unchecked is a common mistake that shows shallow Java knowledge.",
+          "gotcha": "`RuntimeException` is itself a subclass of `Exception`, not of `Error`. It's *unchecked* because the compiler doesn't enforce handling — not because it's fatal."
+        },
+        {
+          "id": "java-exceptions-hierarchy-checked",
+          "topicId": "java-exceptions",
+          "subtopicId": "exception-hierarchy",
+          "title": "Checked vs Unchecked Exceptions",
+          "difficulty": "Beginner",
+          "explanation": "Checked exceptions represent recoverable external failures (file not found, network timeout) — the compiler forces callers to handle them via `try-catch` or `throws`. Unchecked exceptions (`RuntimeException` and subclasses) represent programming errors (null dereference, bad array index) — the compiler doesn't require declaration because they can happen anywhere and handling each call site would be impractical. The rule of thumb: throw checked when the caller can meaningfully recover; throw unchecked for contract violations.",
+          "codeExample": "// Checked — caller MUST handle\npublic void readFile(String path) throws IOException {\n    Files.readAllBytes(Path.of(path));\n}\n\n// Unchecked — no throws declaration needed\npublic void setAge(int age) {\n    if (age < 0) throw new IllegalArgumentException(\"age < 0: \" + age);\n    this.age = age;\n}\n\n// Common mistake: using checked exceptions for programming errors\n// Don't do this:\npublic void processOrder(Order order) throws NullPointerException { // pointless declaration\n    Objects.requireNonNull(order);  // just throw unchecked directly\n}",
+          "whyItMatters": "Getting this distinction wrong leads to either exception swallowing (catching checked exceptions with empty catch blocks) or over-declaring (adding `throws Exception` everywhere). Both are code smells.",
+          "gotcha": "Spring, Hibernate, and most modern frameworks convert checked exceptions to unchecked `RuntimeException` subclasses so callers aren't forced to handle low-level infrastructure errors."
+        },
+        {
+          "id": "java-exceptions-hierarchy-multi",
+          "topicId": "java-exceptions",
+          "subtopicId": "exception-hierarchy",
+          "title": "Multi-catch and Exception Chaining",
+          "difficulty": "Mid",
+          "explanation": "Java 7+ allows catching multiple exception types in a single `catch` block with `|`. The variable in a multi-catch is implicitly `final`. Exception chaining (passing the original cause to the new exception's constructor) preserves the root cause in the stack trace — always chain when rethrowing.",
+          "codeExample": "// Multi-catch (Java 7+)\ntry {\n    process();\n} catch (IOException | SQLException e) {\n    log.error(\"Data operation failed\", e);\n    throw new ServiceException(\"Operation failed\", e); // chain!\n}\n\n// Exception chaining — always pass the cause\npublic void load(String path) {\n    try {\n        Files.readAllBytes(Path.of(path));\n    } catch (IOException e) {\n        // BAD: throw new RuntimeException(\"load failed\"); // loses root cause\n        throw new RuntimeException(\"load failed: \" + path, e); // GOOD: chain\n    }\n}\n\n// Inspect the chain\nThrowable cause = e.getCause();       // immediate cause\nThrowable root  = ExceptionUtils.getRootCause(e); // deepest cause (Apache Commons)",
+          "whyItMatters": "Without exception chaining, debugging production issues becomes a nightmare — you see the rethrown exception but have no idea what the original problem was.",
+          "gotcha": "In a multi-catch block, `e` is `final` — you can't reassign it. Also, both exception types in `A | B` must not be in a subtype relationship (compiler error)."
+        }
+      ]
+    },
+    {
+      "id": "handling-patterns",
+      "title": "Handling Patterns & Best Practices",
+      "cards": [
+        {
+          "id": "java-exceptions-handling-trycatch",
+          "topicId": "java-exceptions",
+          "subtopicId": "handling-patterns",
+          "title": "try-catch-finally",
+          "difficulty": "Beginner",
+          "explanation": "`finally` always executes — whether an exception was thrown, caught, or the method returned normally. It's used to release resources (connections, locks) regardless of outcome. There's one edge case: if `System.exit()` is called or the JVM crashes, `finally` won't run. `finally` executing a `return` statement suppresses any pending exception — a subtle bug.",
+          "codeExample": "Connection conn = null;\ntry {\n    conn = dataSource.getConnection();\n    return conn.prepareStatement(sql).executeQuery();\n} catch (SQLException e) {\n    log.error(\"Query failed\", e);\n    throw new DataAccessException(e);\n} finally {\n    // Always runs — even if catch re-throws\n    if (conn != null) {\n        try { conn.close(); } catch (SQLException ignore) {}\n    }\n}\n\n// Subtle bug: finally with return SUPPRESSES exceptions\ntry {\n    throw new RuntimeException(\"oops\");\n} finally {\n    return 42; // exception silently swallowed — NEVER do this\n}",
+          "whyItMatters": "Resource leaks (unclosed database connections, file handles, locks) are among the most common production bugs. Proper `finally` blocks or try-with-resources are essential.",
+          "gotcha": "A `return` in a `finally` block silently swallows any exception thrown in the `try` block. Never put `return` in `finally`."
+        },
+        {
+          "id": "java-exceptions-handling-twr",
+          "topicId": "java-exceptions",
+          "subtopicId": "handling-patterns",
+          "title": "try-with-resources",
+          "difficulty": "Beginner",
+          "explanation": "Java 7+ `try-with-resources` automatically closes any `AutoCloseable` opened in the resource declaration, even if an exception is thrown. Resources are closed in reverse declaration order. If both the `try` body and the `close()` throw, the close exception is *suppressed* (accessible via `e.getSuppressed()`) and the original exception propagates — opposite of the `finally` + `return` trap.",
+          "codeExample": "// try-with-resources — preferred over manual finally\ntry (InputStream in = new FileInputStream(src);\n     OutputStream out = new FileOutputStream(dst)) {\n    in.transferTo(out);\n} // both streams closed automatically in reverse order\n\n// Accessing suppressed exceptions\ntry (MyResource r = new MyResource()) {\n    r.process(); // throws IOException\n} catch (IOException e) {\n    Throwable[] suppressed = e.getSuppressed(); // close() exception if any\n    for (Throwable s : suppressed) log.warn(\"Suppressed\", s);\n}\n\n// Java 9+: use effectively-final variable in try ()\nvar conn = dataSource.getConnection();\ntry (conn) { // no need to re-declare\n    conn.prepareStatement(sql).execute();\n}",
+          "whyItMatters": "try-with-resources is the idiomatic Java way to handle resource cleanup. It's shorter, safer, and correctly handles the case where both the body and close() throw.",
+          "gotcha": "Only works with `AutoCloseable` implementations. `Connection`, `Statement`, `ResultSet`, `InputStream`, `OutputStream`, `Lock.unlock()` (via wrapper) all qualify."
+        },
+        {
+          "id": "java-exceptions-handling-custom",
+          "topicId": "java-exceptions",
+          "subtopicId": "handling-patterns",
+          "title": "Custom Exceptions",
+          "difficulty": "Mid",
+          "explanation": "Create custom exceptions to give callers meaningful type-based handling. Naming convention: always end in `Exception`. Provide constructors for message-only, cause-only, and message+cause. Extend `RuntimeException` for domain violations that callers shouldn't be forced to handle; extend `Exception` for recoverable external errors.",
+          "codeExample": "// Custom unchecked exception for domain violations\npublic class InsufficientFundsException extends RuntimeException {\n    private final BigDecimal amount;\n    private final BigDecimal balance;\n    \n    public InsufficientFundsException(BigDecimal amount, BigDecimal balance) {\n        super(String.format(\"Cannot withdraw %.2f, balance is %.2f\", amount, balance));\n        this.amount = amount;\n        this.balance = balance;\n    }\n    \n    // Provide cause constructor for chaining\n    public InsufficientFundsException(String message, Throwable cause) {\n        super(message, cause);\n        this.amount = BigDecimal.ZERO;\n        this.balance = BigDecimal.ZERO;\n    }\n    \n    public BigDecimal getAmount() { return amount; }\n    public BigDecimal getBalance() { return balance; }\n}\n\n// Usage with type-safe handling\ntry {\n    account.withdraw(amount);\n} catch (InsufficientFundsException e) {\n    // Type gives us structured data, not just a message string\n    notifyUser(e.getBalance(), e.getAmount());\n}",
+          "whyItMatters": "Custom exceptions with structured fields let callers react to specific failure modes without parsing exception messages. They're also more searchable in logs and more expressive in APIs.",
+          "gotcha": "Don't create an exception hierarchy deeper than 2 levels. Ultra-deep hierarchies are over-engineering. Also, always provide a `(String message, Throwable cause)` constructor for chaining."
+        },
+        {
+          "id": "java-exceptions-handling-antipatterns",
+          "topicId": "java-exceptions",
+          "subtopicId": "handling-patterns",
+          "title": "Exception Anti-patterns",
+          "difficulty": "Mid",
+          "explanation": "The most dangerous exception anti-patterns: (1) swallowing — empty catch block silently ignores failures; (2) catching `Exception` or `Throwable` too broadly; (3) using exceptions for control flow (expensive due to stack trace capture); (4) logging and re-throwing the same exception (double-logging); (5) using `throws Exception` on method signatures (forces callers into the same broad-catch trap).",
+          "codeExample": "// Anti-pattern 1: swallowing\ntry { process(); } catch (Exception e) {} // NEVER\n\n// Anti-pattern 2: too broad catch\ntry {\n    parse(input);\n} catch (Exception e) { // catches NullPointerException too!\n    log.warn(\"parse failed\");\n}\n\n// Anti-pattern 3: exceptions for flow control (slow)\ntry {\n    return Integer.parseInt(s);\n} catch (NumberFormatException e) {\n    return defaultValue; // use s.matches(\"-?\\\\d+\") check instead\n}\n\n// Anti-pattern 4: log AND rethrow = double log\ncatch (IOException e) {\n    log.error(\"failed\", e); // logged here\n    throw new ServiceException(e); // AND again at caller — pick ONE\n}\n\n// Correct: rethrow with chain, log at the boundary\ncatch (IOException e) {\n    throw new ServiceException(\"read failed\", e); // log at REST layer only\n}",
+          "whyItMatters": "Swallowed exceptions cause mysterious silent failures that take hours to debug. Double-logging fills logs with noise. Exception-as-control-flow degrades throughput.",
+          "gotcha": "Filling in the stack trace has O(depth) cost. If you need exceptions for flow control in a hot path, you can override `fillInStackTrace()` to return `this` without capturing — making it cheap."
+        }
+      ]
+    }
+  ]
+}

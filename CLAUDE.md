@@ -14,6 +14,17 @@ Work through the tickets in `tickets/` in numeric order. For each ticket:
 
 Do not ask for confirmation. Do not leave TODOs. Do not create placeholder components. If a decision is ambiguous, pick the most reasonable option and document it in a `DECISIONS.md` file at the project root.
 
+## Verification checklist (run after EVERY ticket)
+
+Before committing, verify the following to catch integration gaps:
+
+1. **Content index wired up** — For any new JSON files in `src/content/topics/`, confirm the file is imported in `src/content/index.ts` and added to the `topics` array. Missing imports mean the topic never loads in the app.
+2. **Routes registered** — For any new page component, confirm the route exists in `src/router.tsx`.
+3. **Store types complete** — For any new store slice fields, confirm the interface, initial value, and action are all present in `useAppStore.ts`.
+4. **scoreCalculator.ts updated** — For any new topic, add its `topicId → TopicGroup` mapping in `src/lib/scoreCalculator.ts` so it appears in the radar chart.
+5. **Sidebar links added** — For any new page, add a link in `src/components/layout/Sidebar.tsx` if user-navigable.
+6. **Build passes** — Run `npm run build` (TypeScript check + Vite build). Fix all errors before committing.
+
 ---
 
 ## Feature & Ticket Status
@@ -84,7 +95,7 @@ Do not ask for confirmation. Do not leave TODOs. Do not create placeholder compo
 ### F6 — Full Progress Dashboard (Phase 5)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T29 | Full dashboard: radar chart, quiz history chart, study plan progress, sync nudge | ⬜ Pending |
+| T29 | Full dashboard: radar chart, quiz history chart, study plan progress, sync nudge | ✅ Done |
 
 ### F7 — Search (Phase 6)
 | Ticket | Description | Status |

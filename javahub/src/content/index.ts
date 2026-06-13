@@ -1,13 +1,41 @@
 import type { Topic } from '@/types'
 import javaCore from './topics/java-core.json'
+import javaExceptions from './topics/java-exceptions.json'
 import oop from './topics/oop.json'
+import solid from './topics/solid.json'
+import cleanCode from './topics/clean-code.json'
+import designPatterns from './topics/design-patterns.json'
+import refactoring from './topics/refactoring.json'
+import testing from './topics/testing.json'
 import dataStructures from './topics/data-structures.json'
+import algorithms from './topics/algorithms.json'
+import apiDesign from './topics/api-design.json'
+import architecturePatterns from './topics/architecture-patterns.json'
+import databaseFundamentals from './topics/database-fundamentals.json'
+import distributedSystems from './topics/distributed-systems.json'
+import securityBasics from './topics/security-basics.json'
+import loggingObservability from './topics/logging-observability.json'
+import systemDesign from './topics/system-design.json'
 
 export const topics: Topic[] = [
-  javaCore as unknown as Topic,
-  oop as unknown as Topic,
-  dataStructures as unknown as Topic,
-]
+  javaCore,
+  javaExceptions,
+  oop,
+  solid,
+  cleanCode,
+  designPatterns,
+  refactoring,
+  testing,
+  dataStructures,
+  algorithms,
+  apiDesign,
+  architecturePatterns,
+  databaseFundamentals,
+  distributedSystems,
+  securityBasics,
+  loggingObservability,
+  systemDesign,
+] as unknown as Topic[]
 
 export const topicMap: Record<string, Topic> = Object.fromEntries(
   topics.map(t => [t.id, t])
