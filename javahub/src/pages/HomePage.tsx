@@ -41,66 +41,72 @@ export default function HomePage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex items-baseline justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-100">Welcome back</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="text-xl font-semibold text-gray-100">Overview</h1>
+          <p className="text-sm text-gray-500 mt-1">
             {dueIds.length > 0
-              ? `${dueIds.length} card${dueIds.length === 1 ? '' : 's'} due for review today`
-              : 'All caught up! No cards due today.'}
+              ? `${dueIds.length} card${dueIds.length === 1 ? '' : 's'} due for review`
+              : 'All caught up — no cards due today'}
           </p>
         </div>
         {streak.count > 0 && (
-          <div className="text-center">
-            <p className="text-3xl">🔥</p>
-            <p className="text-sm font-semibold text-orange-400">{streak.count} day streak</p>
+          <div className="text-right">
+            <p className="text-sm font-semibold text-gray-100">{streak.count}</p>
+            <p className="text-xs text-gray-600">day streak</p>
           </div>
         )}
       </div>
 
+      {/* Sync nudge */}
       {sessionCount >= 3 && (
-        <div className="mb-6 px-4 py-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl flex items-center justify-between">
+        <div className="mb-8 px-4 py-3 bg-gray-900 border border-gray-800 rounded-xl flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-indigo-300">Sync your progress</p>
-            <p className="text-xs text-gray-400 mt-0.5">Sign in to back up your progress and access it on any device</p>
+            <p className="text-sm font-medium text-gray-300">Sync your progress</p>
+            <p className="text-xs text-gray-500 mt-0.5">Back up and access your progress on any device</p>
           </div>
           <button
             disabled
-            className="px-3 py-1.5 bg-indigo-600/50 text-indigo-300 text-xs rounded-lg cursor-not-allowed opacity-60"
-            title="Coming in Phase 7"
+            className="px-3 py-1.5 border border-gray-700 text-gray-500 text-xs rounded-lg cursor-not-allowed"
+            title="Coming in a future update"
           >
-            Sign in (coming soon)
+            Sign in
           </button>
         </div>
       )}
 
+      {/* Pick up where you left off */}
       {lastVisitedEntries.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-            Pick up where you left off
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-600 mb-3">
+            Continue
           </h2>
           {lastVisitedEntries.map(({ topicId, cardId, topic, card }) => (
             <Link
               key={topicId}
               to={`/topic/${topicId}/card/${cardId}`}
-              className="flex items-center gap-4 bg-gray-900 border border-gray-800 hover:border-indigo-500/50 rounded-xl p-4 transition-colors"
+              className="flex items-center gap-4 bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-4 transition-colors group"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-500 mb-0.5">{topic!.title}</p>
+                <p className="text-[11px] text-gray-600 mb-0.5">{topic!.title}</p>
                 <p className="text-sm font-medium text-gray-200 truncate">{card!.title}</p>
               </div>
-              <span className="text-indigo-400 text-sm flex-shrink-0">Continue →</span>
+              <span className="text-xs text-gray-600 group-hover:text-gray-400 transition-colors flex-shrink-0">
+                Continue →
+              </span>
             </Link>
           ))}
         </section>
       )}
 
+      {/* Due for review */}
       {dueIds.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-            Due for review today
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-600 mb-3">
+            Due today
           </h2>
-          <div className="grid gap-3">
+          <div className="flex flex-col gap-2">
             {topics
               .filter(topic => {
                 const topicCardIds = topic.subtopics.flatMap(s => s.cards).map(c => c.id)
@@ -113,14 +119,14 @@ export default function HomePage() {
                   <Link
                     key={topic.id}
                     to={`/topic/${topic.id}/study`}
-                    className="flex items-center justify-between bg-gray-900 border border-gray-800 hover:border-indigo-500/50 rounded-xl px-4 py-3 transition-colors"
+                    className="flex items-center justify-between bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl px-4 py-3 transition-colors group"
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-200">{topic.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{topicDue} card{topicDue === 1 ? '' : 's'} due</p>
                     </div>
-                    <span className="text-xs px-2.5 py-1 bg-indigo-600 text-white rounded-lg">
-                      Study now
+                    <span className="text-xs px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition-colors">
+                      Study
                     </span>
                   </Link>
                 )
@@ -129,38 +135,39 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* All topics */}
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-          All topics
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-600 mb-3">
+          Topics
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {topicStats.map(({ topic, total, mastered, due }) => {
             const pct = total > 0 ? Math.round((mastered / total) * 100) : 0
             return (
               <Link
                 key={topic.id}
                 to={`/topic/${topic.id}`}
-                className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-4 transition-colors"
+                className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-4 transition-colors group"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-0.5">{topic.group}</p>
-                    <p className="text-sm font-semibold text-gray-200">{topic.title}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-gray-600 mb-0.5 truncate">{topic.group}</p>
+                    <p className="text-sm font-medium text-gray-200 group-hover:text-gray-100 transition-colors">{topic.title}</p>
                   </div>
                   {due > 0 && (
-                    <span className="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full flex-shrink-0">
-                      {due} due
+                    <span className="ml-2 text-[11px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded flex-shrink-0">
+                      {due}
                     </span>
                   )}
                 </div>
 
-                <div className="h-1 bg-gray-800 rounded-full overflow-hidden mb-2">
+                <div className="h-px bg-gray-800 rounded-full overflow-hidden mb-2.5">
                   <div
                     className="h-full bg-indigo-500 rounded-full transition-all"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-[11px] text-gray-600">
                   <span>{mastered}/{total} mastered</span>
                   <span>~{topic.estimatedMinutes} min</span>
                 </div>

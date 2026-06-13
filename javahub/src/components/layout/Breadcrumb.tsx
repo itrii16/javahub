@@ -19,17 +19,17 @@ export default function Breadcrumb() {
 
   return (
     <nav aria-label="Breadcrumb">
-      <ol className="flex items-center gap-1.5 text-sm text-gray-400">
+      <ol className="flex items-center gap-2 text-xs text-gray-500">
         <li>
-          <Link to="/" className="hover:text-gray-200 transition-colors">Home</Link>
+          <Link to="/" className="hover:text-gray-300 transition-colors">Home</Link>
         </li>
         {crumbs.map((crumb, i) => (
-          <li key={crumb.id} className="flex items-center gap-1.5">
-            <span className="text-gray-600">/</span>
+          <li key={crumb.id} className="flex items-center gap-2">
+            <span className="text-gray-700">›</span>
             {i === crumbs.length - 1 ? (
-              <span className="text-gray-200">{crumb.crumb}</span>
+              <span className="text-gray-400">{crumb.crumb}</span>
             ) : (
-              <Link to={crumb.pathname} className="hover:text-gray-200 transition-colors">
+              <Link to={crumb.pathname} className="hover:text-gray-300 transition-colors">
                 {crumb.crumb}
               </Link>
             )}

@@ -118,7 +118,7 @@ export default function StudyPage() {
                   : 'bg-gray-800 text-gray-400 hover:text-gray-200'
               }`}
             >
-              {mode === 'teach-it-back' ? '📝 Teach it back' : '🃏 Flashcard'}
+              {mode === 'teach-it-back' ? 'Teach it back' : 'Flashcard'}
             </button>
           </div>
           <span className="text-sm text-gray-500">
