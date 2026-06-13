@@ -19,6 +19,7 @@ import InterviewPrepTopicPage from '@/pages/InterviewPrepTopicPage'
 import BehavioralQuestionsPage from '@/pages/BehavioralQuestionsPage'
 import SystemDesignListPage from '@/pages/SystemDesignListPage'
 import SystemDesignPage from '@/pages/SystemDesignPage'
+import BookmarksPage from '@/pages/BookmarksPage'
 
 export const router = createBrowserRouter(
   [
@@ -110,6 +111,10 @@ export const router = createBrowserRouter(
         {
           path: 'interview-sim/results',
           element: <InterviewSimResultsPage />,
+        },
+        {
+          path: 'bookmarks',
+          element: <BookmarksPage />,
         },
       ],
     },

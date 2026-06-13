@@ -51,6 +51,10 @@ interface AppStore extends AppProgress {
   // Sync nudge
   syncNudgeDismissed: boolean
   dismissSyncNudge: () => void
+  // Search
+  searchHistory: string[]
+  addSearchHistory: (query: string) => void
+  clearSearchHistory: () => void
 }
 
 export const useAppStore = create<AppStore>()(
@@ -90,6 +94,13 @@ export const useAppStore = create<AppStore>()(
       },
       syncNudgeDismissed: false,
       dismissSyncNudge: () => set({ syncNudgeDismissed: true }),
+      searchHistory: [],
+      addSearchHistory: (query) => {
+        set(state => ({
+          searchHistory: [query, ...state.searchHistory.filter(q => q !== query)].slice(0, 8),
+        }))
+      },
+      clearSearchHistory: () => set({ searchHistory: [] }),
 
 
       startAssessment: () => {

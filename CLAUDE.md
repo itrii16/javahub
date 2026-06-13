@@ -100,12 +100,12 @@ Before committing, verify the following to catch integration gaps:
 ### F7 — Search (Phase 6)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T30 | Cmd+K full-text search: modal, index, grouped results, recent searches | ⬜ Pending |
+| T30 | Cmd+K full-text search: modal, index, grouped results, recent searches | ✅ Done |
 
 ### F8 — Bookmarks & Notes (Phase 6)
 | Ticket | Description | Status |
 |--------|-------------|--------|
-| T31 | Bookmarks page, markdown notes, export to .md | ⬜ Pending |
+| T31 | Bookmarks page, markdown notes, export to .md | ✅ Done |
 
 ### F9 — Java News (Phase 4)
 | Ticket | Description | Status |
