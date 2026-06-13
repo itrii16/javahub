@@ -128,11 +128,25 @@ export default function Sidebar({ onNavigate }: Props) {
           Interview Prep
         </p>
         <Link
+          to="/interview-prep"
+          onClick={onNavigate}
+          className="block px-4 py-2.5 text-sm text-gray-300 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+        >
+          Prep Track
+        </Link>
+        <Link
           to="/interview-sim"
           onClick={onNavigate}
           className="block px-4 py-2.5 text-sm text-gray-300 hover:text-gray-100 hover:bg-gray-800 transition-colors"
         >
           Interview Simulation
+        </Link>
+        <Link
+          to="/interview-prep/behavioral"
+          onClick={onNavigate}
+          className="block px-4 py-2.5 text-sm text-gray-300 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+        >
+          Behavioral Questions
         </Link>
         <Link
           to="/assessment"

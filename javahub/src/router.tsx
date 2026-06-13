@@ -14,6 +14,9 @@ import InterviewSimPage from '@/pages/InterviewSimPage'
 import InterviewSimResultsPage from '@/pages/InterviewSimResultsPage'
 import CheatSheetListPage from '@/pages/CheatSheetListPage'
 import CheatSheetPage from '@/pages/CheatSheetPage'
+import InterviewPrepPage from '@/pages/InterviewPrepPage'
+import InterviewPrepTopicPage from '@/pages/InterviewPrepTopicPage'
+import BehavioralQuestionsPage from '@/pages/BehavioralQuestionsPage'
 
 export const router = createBrowserRouter(
   [
@@ -77,6 +80,18 @@ export const router = createBrowserRouter(
         {
           path: 'cheatsheets/:id',
           element: <CheatSheetPage />,
+        },
+        {
+          path: 'interview-prep',
+          element: <InterviewPrepPage />,
+        },
+        {
+          path: 'interview-prep/behavioral',
+          element: <BehavioralQuestionsPage />,
+        },
+        {
+          path: 'interview-prep/:topicId',
+          element: <InterviewPrepTopicPage />,
         },
         {
           path: 'interview-sim',
