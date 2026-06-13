@@ -1,5 +1,6 @@
 export const TOPIC_GROUPS: Record<string, string> = {
   'java-core': 'Java Core',
+  'java-exceptions': 'Java Core',
   'collections': 'Java Core',
   'concurrency': 'Java Core',
   'jvm-internals': 'Java Core',
