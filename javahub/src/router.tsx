@@ -17,6 +17,8 @@ import CheatSheetPage from '@/pages/CheatSheetPage'
 import InterviewPrepPage from '@/pages/InterviewPrepPage'
 import InterviewPrepTopicPage from '@/pages/InterviewPrepTopicPage'
 import BehavioralQuestionsPage from '@/pages/BehavioralQuestionsPage'
+import DesignPatternsListPage from '@/pages/DesignPatternsListPage'
+import DesignPatternPage from '@/pages/DesignPatternPage'
 
 export const router = createBrowserRouter(
   [
@@ -100,6 +102,14 @@ export const router = createBrowserRouter(
         {
           path: 'interview-sim/results',
           element: <InterviewSimResultsPage />,
+        },
+        {
+          path: 'design-patterns',
+          element: <DesignPatternsListPage />,
+        },
+        {
+          path: 'design-patterns/:patternId',
+          element: <DesignPatternPage />,
         },
       ],
     },
