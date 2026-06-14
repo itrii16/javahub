@@ -37,6 +37,7 @@ export type TopicGroup =
   | 'Data Structures'
   | 'Algorithms'
   | 'Interview & System Design'
+  | 'AI for Engineers'
 
 export interface Topic {
   id: string
