@@ -1,0 +1,86 @@
+{
+  "id": "collections",
+  "title": "Collections Deep Dive",
+  "group": "Java Core",
+  "estimatedMinutes": 60,
+  "subtopics": [
+    {
+      "id": "list-set",
+      "title": "List & Set Implementations",
+      "cards": [
+        {
+          "id": "collections-list-set-arraylist-vs-linkedlist",
+          "topicId": "collections",
+          "subtopicId": "list-set",
+          "title": "ArrayList vs LinkedList",
+          "difficulty": "Beginner",
+          "explanation": "ArrayList is backed by a resizable array. It offers O(1) random access by index but O(n) insertion/deletion in the middle (elements must shift). LinkedList is a doubly-linked list: O(1) insertion/deletion at head or tail but O(n) random access. ArrayList's memory is contiguous, giving better CPU cache performance in practice — making it the right default even for many sequential-access patterns.",
+          "codeExample": "// ArrayList — fast random access\nList<String> al = new ArrayList<>();\nal.add(\"a\"); al.add(\"b\"); al.add(\"c\");\nString s = al.get(1);           // O(1)\nal.add(1, \"x\");                 // O(n) — shifts b, c right\n\n// LinkedList — fast head/tail ops\nDeque<String> ll = new LinkedList<>();\nll.addFirst(\"head\");            // O(1)\nll.addLast(\"tail\");             // O(1)\nString head = ll.peekFirst();   // O(1)\n\n// LinkedList as List is rarely better than ArrayList\n// Prefer LinkedList only when used as a Deque",
+          "whyItMatters": "Choosing the wrong list implementation can cause subtle performance problems. The default should almost always be ArrayList; LinkedList shines only when used as a queue or deque.",
+          "gotcha": "LinkedList implements both List and Deque. If you're using it as a stack or queue (addFirst/removeFirst), it's the right choice. If you're using it as a general List with get(i), switch to ArrayList."
+        },
+        {
+          "id": "collections-list-set-hashset-treeset",
+          "topicId": "collections",
+          "subtopicId": "list-set",
+          "title": "HashSet, LinkedHashSet & TreeSet",
+          "difficulty": "Mid",
+          "explanation": "HashSet uses a HashMap internally: O(1) average add/contains/remove, no ordering guarantee. LinkedHashSet maintains insertion order by adding a linked list over the hash buckets — slightly slower but predictable iteration. TreeSet stores elements in a Red-Black tree sorted by natural order or a Comparator: O(log n) for all operations but elements must implement Comparable or a Comparator must be supplied.",
+          "codeExample": "Set<String> hash = new HashSet<>(List.of(\"banana\", \"apple\", \"cherry\"));\n// iteration order: unpredictable\n\nSet<String> linked = new LinkedHashSet<>(List.of(\"banana\", \"apple\", \"cherry\"));\n// iteration order: banana, apple, cherry (insertion order)\n\nSet<String> tree = new TreeSet<>(List.of(\"banana\", \"apple\", \"cherry\"));\n// iteration order: apple, banana, cherry (sorted)\n\n// TreeSet extras\nString first = tree.first();              // \"apple\"\nString ceiling = tree.ceiling(\"b\");       // \"banana\" (>= \"b\")\nNavigableSet<String> head = tree.headSet(\"cherry\", false); // [apple, banana]",
+          "whyItMatters": "Picking the right Set avoids unexpected iteration order bugs (HashSet) or forgotten Comparable/Comparator requirements (TreeSet). LinkedHashSet is useful for deduplication while preserving order.",
+          "gotcha": "TreeSet requires elements to be mutually comparable. Adding an object that doesn't implement Comparable (and providing no Comparator) throws ClassCastException at runtime, not compile time."
+        },
+        {
+          "id": "collections-list-set-copyonwrite",
+          "topicId": "collections",
+          "subtopicId": "list-set",
+          "title": "CopyOnWriteArrayList — Thread-Safe Reads",
+          "difficulty": "Senior",
+          "explanation": "CopyOnWriteArrayList makes every mutating operation (add, set, remove) create a fresh copy of the underlying array. Readers never block — they see a consistent snapshot. This makes it ideal for read-heavy, rarely-written lists shared across threads, such as event listener registries. The trade-off is write cost (O(n) per mutation) and memory pressure from repeated copying.",
+          "codeExample": "List<String> listeners = new CopyOnWriteArrayList<>();\n\n// Writer thread\nlisteners.add(\"listenerA\"); // copies entire array\n\n// Reader threads — never throw ConcurrentModificationException\nfor (String l : listeners) {\n    // iterates over the snapshot taken when iterator was created\n    // even if another thread adds/removes during iteration\n    process(l);\n}\n\n// NOT suitable for write-heavy workloads:\n// 1000 threads each calling add() = 1000 full array copies",
+          "whyItMatters": "Standard ArrayList throws ConcurrentModificationException when modified during iteration. CopyOnWriteArrayList is the go-to replacement for listener lists, plugin registries, or any list that is read far more often than written.",
+          "gotcha": "Iterators on CopyOnWriteArrayList reflect the state at the time the iterator was created. Mutations after that point are invisible to the iterator — which is the desired behaviour but surprises developers expecting a live view."
+        }
+      ]
+    },
+    {
+      "id": "map-internals",
+      "title": "Map Internals & Concurrent Maps",
+      "cards": [
+        {
+          "id": "collections-map-internals-hashmap",
+          "topicId": "collections",
+          "subtopicId": "map-internals",
+          "title": "HashMap Internals",
+          "difficulty": "Mid",
+          "explanation": "HashMap stores entries in an array of buckets. The bucket index is derived from key.hashCode() mixed with a secondary hash. When multiple keys land in the same bucket (collision), they're stored in a linked list. Java 8 promotes that list to a balanced Red-Black tree when a bucket exceeds 8 entries, improving worst-case lookup from O(n) to O(log n). The map resizes (doubles capacity) when the load factor (default 0.75) is exceeded.",
+          "codeExample": "// Initial capacity and load factor\nMap<String, Integer> map = new HashMap<>(16, 0.75f);\n\n// equals/hashCode contract MUST be consistent\n// Bad: mutable key\nclass Bad {\n    int id;\n    public int hashCode() { return id; } // id can change!\n}\n\n// Good: immutable key\nrecord Point(int x, int y) {}  // record auto-generates correct equals/hashCode\nMap<Point, String> grid = new HashMap<>();\ngrid.put(new Point(1, 2), \"A\");  // safe\n\n// Check resize threshold: 16 * 0.75 = 12 entries triggers resize\n// Pre-size to avoid resize: new HashMap<>(expectedSize / 0.75 + 1)",
+          "whyItMatters": "Understanding load factor and resizing helps you pre-size HashMaps correctly, avoiding expensive rehashing in hot paths. The equals/hashCode contract is the most common source of silent HashMap bugs.",
+          "gotcha": "If you override equals() you MUST override hashCode(). Two objects that are equal() must return the same hashCode(). Violating this causes HashMap to store duplicates and never find values."
+        },
+        {
+          "id": "collections-map-internals-linkedhashmap-treemap",
+          "topicId": "collections",
+          "subtopicId": "map-internals",
+          "title": "LinkedHashMap & TreeMap",
+          "difficulty": "Mid",
+          "explanation": "LinkedHashMap extends HashMap with a doubly-linked list running through all entries, maintaining either insertion order (default) or access order (pass true as third constructor arg). Access-order mode makes it trivial to implement an LRU cache. TreeMap stores entries in a Red-Black tree sorted by key, providing O(log n) for all operations and the full NavigableMap API (floorKey, ceilingKey, headMap, tailMap).",
+          "codeExample": "// LRU cache using LinkedHashMap access-order mode\nint capacity = 3;\nMap<Integer, String> lru = new LinkedHashMap<>(capacity, 0.75f, true) {\n    protected boolean removeEldestEntry(Map.Entry<Integer,String> eldest) {\n        return size() > capacity;\n    }\n};\nlru.put(1, \"a\"); lru.put(2, \"b\"); lru.put(3, \"c\");\nlru.get(1);      // moves 1 to most-recently-used position\nlru.put(4, \"d\"); // evicts 2 (least recently used)\n\n// TreeMap range queries\nTreeMap<Integer, String> scores = new TreeMap<>();\nscores.put(50, \"C\"); scores.put(70, \"B\"); scores.put(90, \"A\");\nMap.Entry<Integer,String> floor = scores.floorEntry(75); // 70->B\nMap<Integer,String> top = scores.tailMap(70);            // {70->B, 90->A}",
+          "whyItMatters": "LinkedHashMap's access-order mode is the standard Java LRU cache building block. TreeMap's NavigableMap methods replace manual sorted searches in interview problems and production range queries.",
+          "gotcha": "TreeMap sorts by natural key order. Putting Integer keys 9, 10, 11 gives iteration order 9, 10, 11 — but only because Integer.compareTo sorts numerically, not lexicographically. Use a Comparator when the natural order isn't what you want."
+        },
+        {
+          "id": "collections-map-internals-concurrenthashmap",
+          "topicId": "collections",
+          "subtopicId": "map-internals",
+          "title": "ConcurrentHashMap",
+          "difficulty": "Senior",
+          "explanation": "ConcurrentHashMap achieves thread safety without locking the whole map. In Java 8+, it uses CAS (compare-and-swap) operations for empty buckets and synchronized blocks only on the individual bucket head node for writes. This gives much higher throughput than a synchronized HashMap under concurrent load. Reads are always non-blocking. The compute/merge/putIfAbsent methods perform their operation atomically at the bucket level.",
+          "codeExample": "ConcurrentHashMap<String, Integer> counts = new ConcurrentHashMap<>();\n\n// WRONG — get then put is NOT atomic\nInteger val = counts.get(\"key\");\ncounts.put(\"key\", val == null ? 1 : val + 1); // race condition!\n\n// CORRECT — merge is atomic\ncounts.merge(\"key\", 1, Integer::sum);\n\n// CORRECT — compute is atomic\ncounts.compute(\"key\", (k, v) -> v == null ? 1 : v + 1);\n\n// putIfAbsent — atomic, returns existing value or null\nString existing = map.putIfAbsent(\"key\", \"newVal\");\n\n// size() is approximate under concurrent modification\n// use mappingCount() for long result\nlong approxSize = counts.mappingCount();",
+          "whyItMatters": "ConcurrentHashMap is the standard concurrent map. Collections.synchronizedMap() locks the entire map on every operation, making it a bottleneck. ConcurrentHashMap's segment-level locking gives near-linear scaling.",
+          "gotcha": "ConcurrentHashMap does not allow null keys or null values (unlike HashMap). Putting null throws NullPointerException. This is intentional — null would be ambiguous between 'absent key' and 'key mapped to null'."
+        }
+      ]
+    }
+  ]
+}

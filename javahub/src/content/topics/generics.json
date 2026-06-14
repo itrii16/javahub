@@ -1,0 +1,75 @@
+{
+  "id": "generics",
+  "title": "Generics & Type System",
+  "group": "Java Core",
+  "estimatedMinutes": 45,
+  "subtopics": [
+    {
+      "id": "bounds-wildcards",
+      "title": "Bounds & Wildcards",
+      "cards": [
+        {
+          "id": "generics-bounds-wildcards-basics",
+          "topicId": "generics",
+          "subtopicId": "bounds-wildcards",
+          "title": "Generic Classes & Raw Types",
+          "difficulty": "Beginner",
+          "explanation": "Generics add compile-time type safety to classes and methods. A type parameter (e.g. <T>) is replaced by the actual type at the call site. Raw types (using a generic class without its type parameter, e.g. List instead of List<String>) bypass all generic type checks — they exist only for backward compatibility with pre-Java-5 code. Using raw types trades compile-time safety for runtime ClassCastExceptions.",
+          "codeExample": "// Generic class\npublic class Box<T> {\n    private T value;\n    public Box(T value) { this.value = value; }\n    public T get() { return value; }\n}\n\nBox<String> strBox = new Box<>(\"hello\");\nString s = strBox.get();  // no cast needed — type-safe\n\n// Raw type — avoid!\nBox rawBox = new Box(\"hello\");  // compiler warning\nString bad = (String) rawBox.get();  // cast required, can blow up\n\n// Generic method\npublic static <T extends Comparable<T>> T max(T a, T b) {\n    return a.compareTo(b) >= 0 ? a : b;\n}\n\nint bigger = max(3, 7);      // T inferred as Integer\nString later = max(\"apple\", \"banana\"); // T inferred as String",
+          "whyItMatters": "Raw types disable all generic type checks, making the compiler unable to catch type errors. In modern Java, raw types appear only in legacy codebases or when interfacing with pre-generics APIs — always parameterize in new code.",
+          "gotcha": "The diamond operator <> (Java 7+) lets the compiler infer type parameters: new ArrayList<>() is preferred over new ArrayList<String>(). However, the raw type new ArrayList() is different — it disables type checking entirely."
+        },
+        {
+          "id": "generics-bounds-wildcards-pecs",
+          "topicId": "generics",
+          "subtopicId": "bounds-wildcards",
+          "title": "Bounded Wildcards — PECS",
+          "difficulty": "Mid",
+          "explanation": "PECS (Producer Extends, Consumer Super) guides wildcard choice. Use ? extends T when you only read from a collection (it produces T values). Use ? super T when you only write to a collection (it consumes T values). An unbounded wildcard ? means you neither read (in a type-safe way) nor write. This is because List<Dog> is NOT a subtype of List<Animal>, so wildcards are needed to express 'a list of some subtype of Animal'.",
+          "codeExample": "// Producer Extends — read-only, upper bounded\npublic static double sumList(List<? extends Number> list) {\n    double sum = 0;\n    for (Number n : list) sum += n.doubleValue(); // can read as Number\n    // list.add(3.14); // COMPILE ERROR — can't write (type unknown)\n    return sum;\n}\nsumList(List.of(1, 2, 3));       // List<Integer> OK\nsumList(List.of(1.5, 2.5));      // List<Double> OK\n\n// Consumer Super — write-only, lower bounded\npublic static void addNumbers(List<? super Integer> list) {\n    list.add(1); list.add(2);     // can write Integer\n    // Integer n = list.get(0);  // COMPILE ERROR — returns Object\n}\nList<Number> nums = new ArrayList<>();\naddNumbers(nums);                 // List<Number> accepts Integer writes\n\n// Classic: Collections.copy(dest, src)\n// public static <T> void copy(List<? super T> dest, List<? extends T> src)",
+          "whyItMatters": "PECS is the key to writing flexible generic APIs. Without bounded wildcards, a method accepting List<Number> rejects List<Integer> even though Integer is-a Number — forcing callers to create unnecessary copies.",
+          "gotcha": "? extends T and ? super T are wildcards on the use site, not the type definition. Don't confuse with <T extends Number> in a type parameter declaration, which is an upper bound on the type variable itself."
+        },
+        {
+          "id": "generics-bounds-wildcards-erasure",
+          "topicId": "generics",
+          "subtopicId": "bounds-wildcards",
+          "title": "Type Erasure & Reification",
+          "difficulty": "Senior",
+          "explanation": "Java implements generics via type erasure: generic type information is removed at compile time and replaced with Object (or the upper bound). At runtime, List<String> and List<Integer> are both just List. This is why instanceof checks with parameterized types are illegal, generic arrays cannot be created, and casting a raw type to a parameterized type produces only an unchecked warning. Reifiable types are those whose type info is fully available at runtime (arrays, non-generic classes, raw types, unbounded wildcards).",
+          "codeExample": "// Illegal — type info erased at runtime\nif (obj instanceof List<String>) { }  // COMPILE ERROR\n\n// Legal — raw type check (loses generic safety)\nif (obj instanceof List<?>) { }  // OK, unbounded wildcard\n\n// Generic array creation is illegal\n// T[] arr = new T[10];  // COMPILE ERROR\n// Workaround:\n@SuppressWarnings(\"unchecked\")\nT[] arr = (T[]) new Object[10];  // unchecked cast, may cause heap pollution\n\n// Bridge methods: compiler generates these for generic subclasses\nclass MyList extends ArrayList<String> {\n    @Override\n    public boolean add(String s) { return super.add(s); }\n    // Compiler also generates: add(Object o) { add((String)o); }\n    // This bridges the erased supertype's add(Object) to our add(String)\n}\n\n// @SafeVarargs suppresses heap pollution warnings for generic varargs\n@SafeVarargs\npublic static <T> List<T> listOf(T... items) {\n    return Arrays.asList(items);\n}",
+          "whyItMatters": "Type erasure explains several surprising Java behaviours: why you can't overload on generic types alone, why Gson/Jackson need TypeToken to deserialize generic types, and why reflection on generics requires ParameterizedType.",
+          "gotcha": "Heap pollution occurs when a variable of a parameterized type refers to an object of a different parameterized type. This silently bypasses type safety and causes ClassCastException at the point of use, far from where the bad assignment happened."
+        }
+      ]
+    },
+    {
+      "id": "advanced-generics",
+      "title": "Advanced Generics",
+      "cards": [
+        {
+          "id": "generics-advanced-generics-multiple-bounds",
+          "topicId": "generics",
+          "subtopicId": "advanced-generics",
+          "title": "Multiple Bounds & Generic Methods",
+          "difficulty": "Mid",
+          "explanation": "A type parameter can have multiple upper bounds using &: <T extends Comparable<T> & Serializable>. If one bound is a class (not an interface), it must come first. This allows the method body to call methods from all bounds on T. Generic methods (type parameter declared before the return type) allow single methods on non-generic classes to work with multiple types, with the type inferred from arguments.",
+          "codeExample": "// Multiple bounds — class first, then interfaces\npublic static <T extends Number & Comparable<T>> T clamp(\n        T value, T min, T max) {\n    if (value.compareTo(min) < 0) return min;\n    if (value.compareTo(max) > 0) return max;\n    return value;\n}\n\nint result = clamp(15, 0, 10);   // T=Integer, returns 10\n\n// Generic static utility method\npublic static <T> Optional<T> firstMatch(\n        List<T> list, Predicate<T> pred) {\n    return list.stream().filter(pred).findFirst();\n}\n\nOptional<String> found = firstMatch(names, s -> s.startsWith(\"A\"));\n\n// Explicit type witness (rarely needed — helps when inference fails)\nList<String> empty = Collections.<String>emptyList();\n// Modern Java usually infers correctly without the witness",
+          "whyItMatters": "Multiple bounds let you write utility methods that require several capabilities from the type argument without losing type safety. They appear frequently in sorting utilities, serialization frameworks, and domain-value helpers.",
+          "gotcha": "When using multiple bounds, only one can be a class (the leftmost bound). Writing <T extends Runnable & Callable<String>> is fine (both interfaces), but <T extends Thread & Runnable> is invalid because Thread is a class and Runnable is an interface — Thread must go first, and you can't have two class bounds."
+        },
+        {
+          "id": "generics-advanced-generics-recursive",
+          "topicId": "generics",
+          "subtopicId": "advanced-generics",
+          "title": "Recursive Generics (F-Bounded Polymorphism)",
+          "difficulty": "Senior",
+          "explanation": "F-bounded polymorphism uses the type parameter in its own bound: <T extends Comparable<T>>. This ensures that compareTo receives the same type as the receiver, preventing comparison between unrelated types. It appears in the Builder pattern to make method chaining return the concrete subclass type, and is how Java's own Enum is declared.",
+          "codeExample": "// F-bounded type: ensures type safety in self-referential hierarchies\npublic static <T extends Comparable<T>> T max(List<T> list) {\n    return list.stream().max(Comparator.naturalOrder()).orElseThrow();\n}\n// max(List<Integer>) returns Integer, not Comparable\n// max(List<String>) returns String, not Comparable\n\n// Builder pattern with F-bounded type for fluent subclass chaining\npublic abstract class Builder<T extends Builder<T>> {\n    protected String name;\n    @SuppressWarnings(\"unchecked\")\n    public T name(String name) { this.name = name; return (T) this; }\n    public abstract Product build();\n}\n\npublic class CarBuilder extends Builder<CarBuilder> {\n    private int wheels;\n    public CarBuilder wheels(int n) { this.wheels = n; return this; }\n    public Car build() { return new Car(name, wheels); }\n}\n\n// Chaining returns CarBuilder, not Builder — no cast needed\nCar c = new CarBuilder().name(\"Tesla\").wheels(4).build();\n\n// Java's own Enum uses this:\n// public abstract class Enum<E extends Enum<E>>",
+          "whyItMatters": "Without F-bounded types, a Builder base class's fluent methods return Builder, breaking the chain when subclass-specific methods are called. F-bounds let the base class return the concrete subtype without casts, making fluent APIs safe and ergonomic.",
+          "gotcha": "The unchecked cast (T) this in the base class Builder is a known limitation. It's safe in practice but generates a compiler warning. @SuppressWarnings(\"unchecked\") is appropriate here — document why the cast is safe in a comment."
+        }
+      ]
+    }
+  ]
+}

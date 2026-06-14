@@ -1,0 +1,86 @@
+{
+  "id": "concurrency",
+  "title": "Concurrency & Multithreading",
+  "group": "Java Core",
+  "estimatedMinutes": 90,
+  "subtopics": [
+    {
+      "id": "threads-locks",
+      "title": "Threads & Locks",
+      "cards": [
+        {
+          "id": "concurrency-threads-locks-lifecycle",
+          "topicId": "concurrency",
+          "subtopicId": "threads-locks",
+          "title": "Thread Lifecycle & ExecutorService",
+          "difficulty": "Beginner",
+          "explanation": "A Java thread moves through six states: NEW (created, not started), RUNNABLE (executing or ready to execute), BLOCKED (waiting for a monitor lock), WAITING (indefinitely waiting for another thread), TIMED_WAITING (waiting with a timeout), and TERMINATED (finished). Creating threads directly via new Thread() is discouraged in production — prefer ExecutorService which pools and reuses threads, reducing creation overhead and providing lifecycle management.",
+          "codeExample": "// Prefer ExecutorService over raw threads\nExecutorService pool = Executors.newFixedThreadPool(4);\n\n// Submit a Runnable (no return value)\npool.submit(() -> System.out.println(\"task\"));\n\n// Submit a Callable (returns a value)\nFuture<Integer> future = pool.submit(() -> 42);\nint result = future.get(); // blocks until done\n\n// Always shut down the pool\npool.shutdown();\npool.awaitTermination(5, TimeUnit.SECONDS);\n\n// Thread states\nThread t = new Thread(() -> {});\nSystem.out.println(t.getState()); // NEW\nt.start();\n// State transitions: NEW → RUNNABLE → TERMINATED",
+          "whyItMatters": "Raw thread creation is expensive (~1MB stack per thread by default). ExecutorService lets you control concurrency level, handle exceptions via Future, and gracefully shut down — all critical for production services.",
+          "gotcha": "Calling future.get() without a timeout blocks the calling thread indefinitely if the task hangs. Always use future.get(timeout, TimeUnit.SECONDS) in production code."
+        },
+        {
+          "id": "concurrency-threads-locks-synchronized-reentrantlock",
+          "topicId": "concurrency",
+          "subtopicId": "threads-locks",
+          "title": "synchronized vs ReentrantLock",
+          "difficulty": "Mid",
+          "explanation": "The synchronized keyword acquires the intrinsic (monitor) lock of an object, automatically releasing it when the block exits. ReentrantLock from java.util.concurrent.locks provides more flexibility: tryLock() attempts to acquire without blocking, lockInterruptibly() can be cancelled, and a fairness parameter ensures FIFO ordering. Both support re-entrance (a thread that already holds the lock can acquire it again). ReentrantLock must be manually unlocked — always in a finally block.",
+          "codeExample": "// synchronized — simple, automatic unlock\npublic synchronized void increment() {\n    count++;\n}\n\n// synchronized block (finer grain)\npublic void transfer(Account from, Account to, int amount) {\n    synchronized (from) {\n        synchronized (to) {\n            from.debit(amount);\n            to.credit(amount);\n        }\n    }\n}\n\n// ReentrantLock — more control\nprivate final ReentrantLock lock = new ReentrantLock();\n\npublic void doWork() {\n    lock.lock();\n    try {\n        // critical section\n    } finally {\n        lock.unlock(); // ALWAYS in finally\n    }\n}\n\n// tryLock — non-blocking attempt\nif (lock.tryLock(100, TimeUnit.MILLISECONDS)) {\n    try { /* ... */ } finally { lock.unlock(); }\n} else {\n    // could not acquire — handle gracefully\n}",
+          "whyItMatters": "synchronized is fine for simple mutual exclusion. ReentrantLock is needed when you require timed or interruptible lock acquisition, fairness guarantees, or multiple Condition objects for fine-grained wait/notify.",
+          "gotcha": "Acquiring locks in inconsistent order across threads causes deadlock. Always acquire multiple locks in the same canonical order (e.g., by object identity: System.identityHashCode). The transfer() example above is vulnerable if two threads call it with swapped from/to."
+        },
+        {
+          "id": "concurrency-threads-locks-volatile",
+          "topicId": "concurrency",
+          "subtopicId": "threads-locks",
+          "title": "volatile & the Java Memory Model",
+          "difficulty": "Senior",
+          "explanation": "The Java Memory Model allows threads to cache variables in CPU registers or caches, making changes invisible to other threads. Declaring a field volatile guarantees visibility: every write is flushed to main memory and every read fetches from main memory. Volatile does NOT guarantee atomicity — volatile int count++ is still a read-modify-write race. Volatile establishes a happens-before relationship: a write to a volatile field happens-before every subsequent read of that same field.",
+          "codeExample": "// Visibility problem without volatile\nclass Flag {\n    private boolean stop = false; // JIT may cache in register\n    void requestStop() { stop = true; }\n    void run() {\n        while (!stop) { /* may loop forever — never sees write */ }\n    }\n}\n\n// Fixed with volatile\nclass Flag {\n    private volatile boolean stop = false; // always reads from memory\n    void requestStop() { stop = true; }\n    void run() {\n        while (!stop) { /* correctly terminates */ }\n    }\n}\n\n// BROKEN double-checked locking (without volatile)\nclass Singleton {\n    private static Singleton instance;\n    public static Singleton get() {\n        if (instance == null) {\n            synchronized (Singleton.class) {\n                if (instance == null)\n                    instance = new Singleton(); // partially constructed object can escape!\n            }\n        }\n        return instance;\n    }\n}\n// Fix: declare instance as volatile",
+          "whyItMatters": "Without volatile, the JIT compiler or CPU can reorder memory operations in ways that break multi-threaded correctness even when the logic looks right. Volatile is the minimal tool for flag variables and the fix for double-checked locking.",
+          "gotcha": "volatile long and volatile double are atomic on 64-bit JVMs but NOT guaranteed atomic by the JLS on 32-bit JVMs. For guaranteed atomic compound operations (increment, compare-and-swap) use AtomicInteger, AtomicLong, or AtomicReference instead."
+        }
+      ]
+    },
+    {
+      "id": "async-modern",
+      "title": "CompletableFuture & Virtual Threads",
+      "cards": [
+        {
+          "id": "concurrency-async-modern-completablefuture-basics",
+          "topicId": "concurrency",
+          "subtopicId": "async-modern",
+          "title": "CompletableFuture Basics",
+          "difficulty": "Mid",
+          "explanation": "CompletableFuture is Java 8's async pipeline API. supplyAsync runs a Supplier on the ForkJoinPool (or a custom executor), returning a future. thenApply transforms the result (like map). thenCompose chains another async operation (like flatMap — avoids CompletableFuture<CompletableFuture<T>>). exceptionally handles errors. allOf waits for all futures; anyOf waits for the first.",
+          "codeExample": "// Basic async chain\nCompletableFuture<String> future = CompletableFuture\n    .supplyAsync(() -> fetchUserId())          // runs on ForkJoinPool\n    .thenApply(id -> \"User-\" + id)             // transform result\n    .thenApply(String::toUpperCase);\n\nString result = future.join();  // block and get (or use get())\n\n// Error handling\nCompletableFuture<String> safe = CompletableFuture\n    .supplyAsync(() -> riskyCall())\n    .exceptionally(ex -> \"fallback\");\n\n// Wait for multiple futures\nCompletableFuture<String> f1 = fetchName();\nCompletableFuture<Integer> f2 = fetchAge();\nCompletableFuture.allOf(f1, f2).join();\nSystem.out.println(f1.join() + \" age \" + f2.join());\n\n// Custom executor (avoid blocking ForkJoinPool with I/O)\nExecutor ioPool = Executors.newCachedThreadPool();\nCompletableFuture.supplyAsync(() -> readFromDB(), ioPool);",
+          "whyItMatters": "CompletableFuture replaces callback hell and Future.get() blocking. It enables non-blocking async pipelines and parallel fan-out (allOf) that are readable and composable.",
+          "gotcha": "supplyAsync without a custom executor uses ForkJoinPool.commonPool(). Submitting blocking I/O to this pool starves it and hurts parallel stream performance across the JVM. Always provide a dedicated executor for I/O-bound tasks."
+        },
+        {
+          "id": "concurrency-async-modern-completablefuture-composition",
+          "topicId": "concurrency",
+          "subtopicId": "async-modern",
+          "title": "thenCompose vs thenApply, handle vs exceptionally",
+          "difficulty": "Senior",
+          "explanation": "thenApply is synchronous transformation (result → new result). thenCompose accepts a function that returns another CompletableFuture, flattening the nesting — use it when the next step is itself async. handle receives both the result and the exception (one will be null), allowing you to recover or rethrow — it runs whether or not the stage completed exceptionally, unlike exceptionally which only runs on failure.",
+          "codeExample": "// thenApply: synchronous transform\nCompletableFuture<String> cf1 = getIdAsync()\n    .thenApply(id -> \"prefix-\" + id);  // String → String\n\n// thenCompose: async transform (flatMap)\nCompletableFuture<User> cf2 = getIdAsync()\n    .thenCompose(id -> getUserAsync(id)); // avoids CF<CF<User>>\n\n// handle: always runs, sees both result and exception\nCompletableFuture<String> cf3 = riskyAsync()\n    .handle((result, ex) -> {\n        if (ex != null) return \"error: \" + ex.getMessage();\n        return result.toUpperCase();\n    });\n\n// exceptionally: only runs on failure, passes through on success\nCompletableFuture<String> cf4 = riskyAsync()\n    .exceptionally(ex -> \"fallback\");\n\n// whenComplete: side-effect only, does not transform\nriskyAsync().whenComplete((r, ex) -> log.info(\"done: {}\", r));",
+          "whyItMatters": "Confusing thenApply and thenCompose produces CompletableFuture<CompletableFuture<T>>, which compiles but is never what you want. Choosing handle vs exceptionally correctly determines whether recovery logic applies in the success path.",
+          "gotcha": "handle and whenComplete always run even if the previous stage was cancelled. If you need to propagate cancellation, check whether the exception is a CancellationException before recovering."
+        },
+        {
+          "id": "concurrency-async-modern-virtual-threads",
+          "topicId": "concurrency",
+          "subtopicId": "async-modern",
+          "title": "Virtual Threads (Java 21)",
+          "difficulty": "Senior",
+          "explanation": "Virtual threads (Project Loom, JEP 444) are lightweight threads managed by the JVM, not the OS. Millions can exist simultaneously because they are mounted onto a small pool of OS 'carrier' threads and unmounted when blocking (I/O, sleep, synchronized). This makes blocking code as scalable as reactive/async code without the callback complexity. Virtual threads are ideal for high-concurrency I/O-bound workloads (web servers, DB calls).",
+          "codeExample": "// Creating virtual threads\nThread vt = Thread.ofVirtual().start(() -> System.out.println(\"virtual\"));\n\n// Virtual thread per task — scales to millions\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    for (int i = 0; i < 1_000_000; i++) {\n        executor.submit(() -> Thread.sleep(Duration.ofSeconds(1)));\n    }\n} // try-with-resources shuts down executor\n\n// Spring Boot 3.2+ — one line to enable\n// spring.threads.virtual.enabled=true\n\n// Pinning pitfall: synchronized blocks pin the carrier thread!\n// This defeats virtual thread scaling:\npublic synchronized void holdingLock() {\n    blockingIO(); // carrier thread is pinned during I/O!\n}\n// Fix: replace synchronized with ReentrantLock\nprivate final ReentrantLock lock = new ReentrantLock();\npublic void betterVersion() {\n    lock.lock();\n    try { blockingIO(); } finally { lock.unlock(); }\n}",
+          "whyItMatters": "Virtual threads eliminate the 'one thread per request' scalability ceiling without requiring reactive programming. A Tomcat server with virtual threads handles the same load as a Netty reactive server with far simpler, sequential-looking code.",
+          "gotcha": "Virtual threads are NOT faster for CPU-bound work — they only help when threads spend time blocked on I/O. For CPU-bound tasks, you still want a bounded thread pool sized to available processors. Also avoid ThreadLocal caches with virtual threads (potentially millions of threads = millions of cached objects)."
+        }
+      ]
+    }
+  ]
+}

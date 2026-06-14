@@ -1,0 +1,86 @@
+{
+  "id": "jvm-internals",
+  "title": "JVM Internals",
+  "group": "Java Core",
+  "estimatedMinutes": 75,
+  "subtopics": [
+    {
+      "id": "memory-gc",
+      "title": "Memory Model & Garbage Collection",
+      "cards": [
+        {
+          "id": "jvm-internals-memory-gc-areas",
+          "topicId": "jvm-internals",
+          "subtopicId": "memory-gc",
+          "title": "JVM Memory Areas",
+          "difficulty": "Beginner",
+          "explanation": "The JVM divides memory into distinct areas. The heap holds all object instances and is shared across threads — split into young generation (Eden + two Survivor spaces) and old generation. Each thread has its own stack holding frames for method calls (local variables, operand stack). The metaspace (replacing PermGen in Java 8+) stores class metadata and is backed by native memory. The code cache stores JIT-compiled native code. OutOfMemoryError messages tell you which area is exhausted.",
+          "codeExample": "// Common OOM scenarios and their area:\n\n// 1. Heap: too many live objects\n// java.lang.OutOfMemoryError: Java heap space\n// Fix: -Xmx512m, find memory leak with heap dump\n\n// 2. Metaspace: too many loaded classes (common with CGLIB, Groovy)\n// java.lang.OutOfMemoryError: Metaspace\n// Fix: -XX:MaxMetaspaceSize=256m\n\n// 3. Stack overflow: infinite/very deep recursion\n// java.lang.StackOverflowError\n// Fix: -Xss4m, or rewrite as iterative\n\n// 4. Direct memory (NIO buffers)\n// java.lang.OutOfMemoryError: Direct buffer memory\n// Fix: -XX:MaxDirectMemorySize=256m\n\n// Useful flags:\n// -Xms256m -Xmx1g   (initial / max heap)\n// -Xss1m            (thread stack size)",
+          "whyItMatters": "Reading OOM error messages tells you exactly where to look. Heap OOMs require profiling and leak detection. Metaspace OOMs often indicate classloader leaks in application servers or excessive dynamic proxy generation.",
+          "gotcha": "The JVM does NOT return heap memory to the OS aggressively by default. A process that peaked at 2GB heap may still appear to use 2GB in top/htop even after objects are collected. Use -XX:+UseContainerSupport in Docker containers or the JVM may miscalculate heap limits."
+        },
+        {
+          "id": "jvm-internals-memory-gc-algorithms",
+          "topicId": "jvm-internals",
+          "subtopicId": "memory-gc",
+          "title": "GC Algorithms: G1, ZGC, Shenandoah",
+          "difficulty": "Mid",
+          "explanation": "Serial and Parallel GC are stop-the-world collectors. G1 (default since Java 9) divides the heap into equal-sized regions, mixing concurrent marking with stop-the-world evacuation pauses — it targets a configurable pause goal (default 200ms). ZGC (Java 15+, production-ready Java 21) performs almost all work concurrently, delivering sub-millisecond pauses regardless of heap size. Shenandoah (Red Hat, available in OpenJDK) takes a similar approach to ZGC.",
+          "codeExample": "# GC selection flags\n-XX:+UseG1GC              # default Java 9+, good all-rounder\n-XX:MaxGCPauseMillis=100  # G1 pause target (best-effort)\n\n-XX:+UseZGC               # Java 15+ production, <1ms pauses\n-XX:+UseShenandoahGC      # alternative low-latency GC\n\n-XX:+UseParallelGC        # throughput-optimised, accepts longer pauses\n\n# When to choose:\n# G1     — most applications, latency 10–200ms tolerable\n# ZGC    — latency-sensitive (trading platforms, gaming, APIs with SLAs)\n# Parallel — batch jobs, throughput matters more than latency\n\n# GC logging (Java 9+)\n-Xlog:gc*:file=gc.log:time,uptime,level,tags:filecount=5,filesize=20m",
+          "whyItMatters": "GC pauses directly impact API tail latencies and real-time system behaviour. Choosing the right collector for your workload can reduce p99 latency by an order of magnitude without changing application code.",
+          "gotcha": "G1's MaxGCPauseMillis is a target, not a hard limit. Under heavy allocation pressure G1 may exceed it. If pause predictability is critical (financial systems, games), ZGC or Shenandoah are better choices."
+        },
+        {
+          "id": "jvm-internals-memory-gc-tuning",
+          "topicId": "jvm-internals",
+          "subtopicId": "memory-gc",
+          "title": "GC Tuning Basics",
+          "difficulty": "Senior",
+          "explanation": "Effective GC tuning starts with measurement, not flag tweaking. Enable GC logging and use GCEasy or GCViewer to visualise pause times, collection frequency, and promotion rates. Common issues: frequent minor GC (allocation rate too high — profile object creation), frequent full GC (old gen too small or memory leak), premature promotion (survivor spaces too small causing objects to promote early).",
+          "codeExample": "# Step 1: enable GC logging\n-Xlog:gc*:file=gc-%p.log:time,uptime:filecount=5,filesize=20m\n\n# Step 2: baseline metrics to capture\n# - Minor GC frequency and pause time\n# - Old gen occupancy after full GC (should stay < 50%)\n# - Promotion rate (bytes moved to old gen per second)\n\n# Step 3: common fixes\n-Xms2g -Xmx2g          # set equal to avoid resize pauses\n-XX:NewRatio=3          # young:old = 1:3 (25% young gen)\n-XX:SurvivorRatio=8     # eden:survivor = 8:1\n\n# Step 4: heap dump for memory leaks\n# Triggered automatically:\n-XX:+HeapDumpOnOutOfMemoryError\n-XX:HeapDumpPath=/tmp/heap.hprof\n\n# Manual:\njmap -dump:format=b,file=heap.hprof <pid>\n# Analyse with Eclipse MAT or VisualVM",
+          "whyItMatters": "Premature GC tuning is wasteful. The correct approach: measure first (GC logs, heap dumps), identify the bottleneck (allocation rate, live set size, pause targets), then apply targeted flags.",
+          "gotcha": "Setting -Xms equal to -Xmx (fixed heap size) eliminates resize pauses and helps the OS reserve memory upfront, but means the JVM holds that memory even when idle. In shared environments (Kubernetes) this inflates pod memory requests."
+        }
+      ]
+    },
+    {
+      "id": "classloading-jit",
+      "title": "Class Loading & JIT",
+      "cards": [
+        {
+          "id": "jvm-internals-classloading-jit-classloader-hierarchy",
+          "topicId": "jvm-internals",
+          "subtopicId": "classloading-jit",
+          "title": "ClassLoader Hierarchy & Parent Delegation",
+          "difficulty": "Mid",
+          "explanation": "The JVM uses three built-in class loaders in a parent-delegation chain: Bootstrap (loads rt.jar/java.* from JDK), Platform/Extension (loads javax.*, etc.), and Application/System (loads classes from the classpath). When a class loader is asked to load a class, it first delegates to its parent. This prevents user code from replacing core JDK classes. Application servers add their own class loaders per deployment to isolate applications.",
+          "codeExample": "// Inspect class loader hierarchy\nClass<?> c = ArrayList.class;\nSystem.out.println(c.getClassLoader());         // null (Bootstrap)\n\nClass<?> myClass = MyApp.class;\nSystem.out.println(myClass.getClassLoader());    // AppClassLoader\nSystem.out.println(myClass.getClassLoader()\n    .getParent());                               // PlatformClassLoader\n\n// Load a class dynamically\nClass<?> clazz = Class.forName(\"com.example.MyPlugin\");\n// ^ uses calling class's loader by default\n\n// Load with a specific loader\nURLClassLoader loader = new URLClassLoader(\n    new URL[]{ new File(\"plugin.jar\").toURI().toURL() }\n);\nClass<?> plugin = loader.loadClass(\"com.example.MyPlugin\");\nloader.close(); // important: release the jar file handle",
+          "whyItMatters": "ClassLoader issues cause ClassCastException between the same class loaded by different loaders, ClassNotFoundException in dynamic plugin systems, and metaspace leaks when loaders aren't closed. Understanding the hierarchy is essential for framework and library authors.",
+          "gotcha": "ClassCastException with message 'com.example.Foo cannot be cast to com.example.Foo' means two different class loaders each loaded the same class. The resulting Class objects are distinct even though the names match."
+        },
+        {
+          "id": "jvm-internals-classloading-jit-compilation",
+          "topicId": "jvm-internals",
+          "subtopicId": "classloading-jit",
+          "title": "JIT Compilation & Tiered Compilation",
+          "difficulty": "Mid",
+          "explanation": "The JVM starts by interpreting bytecode. The JIT compiler monitors execution counts and compiles hot methods to native code in tiers: C1 (client compiler) does fast compilation with basic optimisations; C2 (server compiler) does aggressive optimisation (inlining, escape analysis, loop unrolling) after a method becomes very hot. Tiered compilation (default since Java 8) uses both: C1 first for fast startup, C2 for peak performance. This is why JVM applications need warm-up time before reaching peak throughput.",
+          "codeExample": "// Observe JIT in action\n// Flag: -XX:+PrintCompilation\n// Output format: timestamp  compile-id  flags  class::method  size\n// e.g.: 1234  42   !   java.util.HashMap::get (35 bytes)\n// '!' = has exception handler, 's' = synchronised, 'n' = native\n\n// Flag: -XX:CompileThreshold=10000 (default)\n// Method compiled after ~10,000 invocations (lower = faster warm-up)\n\n// Escape analysis — JIT may allocate on stack instead of heap\n// if it can prove an object doesn't escape the method:\npublic int sum(int a, int b) {\n    Point p = new Point(a, b); // may be stack-allocated by JIT\n    return p.x + p.y;\n}\n\n// Inlining — small methods are inlined at call sites\n// -XX:MaxInlineSize=35 (methods <= 35 bytes are inlined)\n// -XX:+PrintInlining to observe",
+          "whyItMatters": "JIT warm-up explains why benchmarking JVM code requires a JMH harness (which runs many warm-up iterations before measuring). In production, canary deployments and gradual traffic ramp-up give the JIT time to reach peak performance before handling full load.",
+          "gotcha": "Microbenchmarks without JMH almost always measure interpreter performance, not JIT-compiled performance. The results are often 10–100x slower than what actually runs in production, leading to false conclusions about Java performance."
+        },
+        {
+          "id": "jvm-internals-classloading-jit-diagnostics",
+          "topicId": "jvm-internals",
+          "subtopicId": "classloading-jit",
+          "title": "JVM Diagnostic Tools",
+          "difficulty": "Senior",
+          "explanation": "The JDK ships several diagnostic tools. jstack dumps thread states (useful for finding deadlocks and hung threads). jmap produces heap dumps or histograms. jcmd is a Swiss Army knife: it can trigger GC, generate heap dumps, print VM flags, and start flight recordings. Java Flight Recorder (JFR, free since Java 11) provides continuous low-overhead profiling that can be dumped on demand or on crash.",
+          "codeExample": "# Thread dump — find deadlocks and blocked threads\njstack <pid> > thread-dump.txt\n# Look for: 'BLOCKED', 'WAITING', 'Found one Java-level deadlock'\n\n# Heap histogram — quick leak check without full dump\njmap -histo:live <pid> | head -30\n# Shows: #instances  bytes  class-name\n\n# Full heap dump (then analyse with Eclipse MAT)\njcmd <pid> GC.heap_dump /tmp/heap.hprof\n\n# JFR — start a recording\njcmd <pid> JFR.start duration=60s filename=/tmp/app.jfr\n# View with JDK Mission Control (JMC)\n\n# Print all JVM flags in use\njcmd <pid> VM.flags\n\n# Force GC (for testing — never in production scripts)\njcmd <pid> GC.run\n\n# Useful automated flags\n-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/dumps/\n-XX:+ExitOnOutOfMemoryError     # fail fast instead of limping",
+          "whyItMatters": "Being able to diagnose a running JVM without restarting it is a critical production skill. Thread dumps identify deadlocks and thread pool exhaustion in seconds. JFR recordings can diagnose CPU hot spots, lock contention, and allocation pressure without a performance agent.",
+          "gotcha": "jmap -dump on a live JVM triggers a full GC and pauses the process — sometimes for many seconds on large heaps. In production, prefer -XX:+HeapDumpOnOutOfMemoryError (automatic, triggered only on crash) or JFR over manual jmap invocations."
+        }
+      ]
+    }
+  ]
+}
